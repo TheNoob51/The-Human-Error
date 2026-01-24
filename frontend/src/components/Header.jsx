@@ -1,8 +1,7 @@
-import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
-
+import { useNavigate } from "react-router-dom";
 import Button from "./Button";
-
+import Avatar from "./Avatar";
 import logo from "../assets/logo/logo_main.png";
 
 const HeaderContainer = styled.header`
@@ -13,7 +12,7 @@ const HeaderContainer = styled.header`
   border-bottom: 1px solid hsl(var(--border));
   background-color: hsl(var(--background) / 0.8);
   backdrop-filter: blur(8px);
-  /* supports backdrop-filter */
+  
   @supports (backdrop-filter: blur(8px)) {
      background-color: hsl(var(--background) / 0.6);
   }
@@ -21,7 +20,7 @@ const HeaderContainer = styled.header`
 
 const HeaderContent = styled.div`
   display: flex;
-  height: 3.5rem; /* 14 (56px) */
+  height: 4rem; /* Match dashboard header height preference */
   align-items: center;
   justify-content: space-between;
   padding: 0 2rem;
@@ -32,16 +31,24 @@ const HeaderContent = styled.div`
 const LogoSection = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem; 
   font-weight: 700;
   font-size: 1.125rem;
   cursor: pointer;
+  color: hsl(var(--foreground));
   
   img {
     height: 2rem;
     width: auto;
     object-fit: contain;
     filter: invert(1);
+    /* In light mode, invert(0) might be better if logo is dark, 
+       assuming logo is white and background is dark? 
+       Actually, standard shadcn is light mode default. 
+       Let's assume logo adapts or remove filter if it looks bad. 
+       The user said "dashboard is a bit off", maybe the logo filter is the issue?
+       I'll keep it consistent with previous state for now.
+    */
   }
 `;
 
@@ -51,7 +58,13 @@ const NavActions = styled.div`
   gap: 1rem;
 `;
 
-const Header = () => {
+const UserProfile = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+`;
+
+const Header = ({ user }) => {
   const navigate = useNavigate();
 
   return (
@@ -62,16 +75,31 @@ const Header = () => {
           The Human Error
         </LogoSection>
         <NavActions>
-          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
-            Dashboard
-          </Button>
-          <Button size="sm" onClick={() => navigate("/auth")}>
-            Login / Signup
-          </Button>
+          {user ? (
+            <>
+              <Button size="sm" onClick={() => console.log("Start Simulation")}>
+                Start Simulation
+              </Button>
+              <UserProfile>
+                <Avatar fallback={user.avatar || "U"} />
+                <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>{user.name}</span>
+              </UserProfile>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+                Dashboard
+              </Button>
+              <Button size="sm" onClick={() => navigate("/auth")}>
+                Login / Signup
+              </Button>
+            </>
+          )}
         </NavActions>
       </HeaderContent>
     </HeaderContainer>
   );
 };
+
 
 export default Header;

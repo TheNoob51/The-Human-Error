@@ -122,6 +122,9 @@ const slideVariants = {
 
 const Auth = ({ initialMode = "login" }) => {
   const [mode, setMode] = useState(initialMode);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -133,6 +136,8 @@ const Auth = ({ initialMode = "login" }) => {
   }, [initialMode]);
 
   const handleTabChange = (newMode) => {
+    // Clear error when switching modes
+    setError("");
     setMode(newMode);
     // Optionally correct the URL without full reload
     window.history.pushState(null, "", `/${newMode}`);
@@ -172,18 +177,49 @@ const Auth = ({ initialMode = "login" }) => {
                 exit="exit"
                 variants={slideVariants}
                 transition={{ duration: 0.2 }}
-                onSubmit={(e) => e.preventDefault()}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setError("");
+                  if (isLogin) {
+                    if (email === "test@gmail.com" && password === "123456") {
+                      navigate("/dashboard");
+                    } else {
+                      setError("Invalid email or password");
+                    }
+                  } else {
+                    // Fake signup
+                    navigate("/dashboard");
+                  }
+                }}
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" placeholder="m@example.com" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="test@gmail.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                     <Label htmlFor="password">Password</Label>
-                    <Input id="password" type="password" />
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="123456"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
                   </div>
                 </div>
+
+                {error && (
+                  <div style={{ color: "hsl(var(--destructive))", fontSize: "0.875rem", fontWeight: 500 }}>
+                    {error}
+                  </div>
+                )}
 
                 <Button type="submit" style={{ width: "100%" }}>
                   {isLogin ? "Login" : "Sign Up"}
