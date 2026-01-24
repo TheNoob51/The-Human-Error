@@ -9,6 +9,8 @@ function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/login" element={<Auth initialMode="login" />} />
+        <Route path="/signup" element={<Auth initialMode="signup" />} />
         <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </Router>
@@ -16,4 +18,3 @@ function App() {
 }
 
 export default App;
-

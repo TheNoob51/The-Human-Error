@@ -1,8 +1,30 @@
+import { useState, useEffect } from "react";
 import styled from "styled-components";
-import { motion } from "framer-motion";
-import { Card, CardHeader, CardTitle, CardContent } from "../components/Card";
+import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "../components/Card";
 import Button from "../components/Button";
+import Input from "../components/Input";
+import Label from "../components/Label";
 import Header from "../components/Header";
+import { siGithub, siGoogle } from "simple-icons/icons";
+
+// Helper component for Simple Icons
+const SimpleIcon = ({ icon, size = 16, color = "currentColor", style = {} }) => (
+  <svg
+    role="img"
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill={color}
+    style={style}
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d={icon.path} />
+  </svg>
+);
+
+// --- Styled Components ---
 
 const PageContainer = styled.div`
   min-height: 100vh;
@@ -11,78 +33,189 @@ const PageContainer = styled.div`
   background-color: hsl(var(--background));
 `;
 
-const AuthContent = styled.div`
+const AuthLayout = styled.div`
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
+  background: radial-gradient(circle at top center, hsl(var(--primary) / 0.1), transparent 40%);
 `;
 
-const StyledCard = styled(Card)`
+const AuthCard = styled(Card)`
   width: 100%;
   max-width: 400px;
+  overflow: hidden;
+  position: relative;
 `;
 
-const InputGroup = styled.div`
-  margin-bottom: 1rem;
-  
-  label {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 500;
-    margin-bottom: 0.5rem;
+const TabsList = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background-color: hsl(var(--muted));
+  padding: 0.25rem;
+  margin: 1.5rem 1.5rem 0;
+  border-radius: calc(var(--radius) - 2px);
+`;
+
+const TabTrigger = styled.button`
+  background-color: ${(props) => (props.$active ? "hsl(var(--background))" : "transparent")};
+  color: ${(props) => (props.$active ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))")};
+  box-shadow: ${(props) => (props.$active ? "0 1px 2px 0 rgb(0 0 0 / 0.05)" : "none")};
+  border: none;
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: calc(var(--radius) - 4px);
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    color: hsl(var(--foreground));
   }
-  
-  input {
+`;
+
+const Divider = styled.div`
+  position: relative;
+  text-align: center;
+  margin: 1.5rem 0;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
     width: 100%;
-    height: 2.5rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: var(--radius);
-    border: 1px solid hsl(var(--border));
-    background-color: transparent;
-    font-size: 0.875rem;
-    
-    &:focus {
-      outline: 2px solid hsl(var(--ring));
-      outline-offset: 2px;
-    }
+    height: 1px;
+    background-color: hsl(var(--border));
+  }
+
+  span {
+    position: relative;
+    background-color: hsl(var(--card));
+    padding: 0 0.75rem;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.75rem;
+    text-transform: uppercase;
   }
 `;
 
-const Auth = () => {
-    return (
-        <PageContainer>
-            <Header />
-            <AuthContent>
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                >
-                    <StyledCard>
-                        <CardHeader>
-                            <CardTitle>Welcome Back</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <InputGroup>
-                                <label>Email</label>
-                                <input type="email" placeholder="user@example.com" />
-                            </InputGroup>
-                            <InputGroup>
-                                <label>Password</label>
-                                <input type="password" placeholder="••••••••" />
-                            </InputGroup>
-                            <Button style={{ width: "100%", marginTop: "1rem" }}>Login</Button>
-                            <p style={{ marginTop: "1rem", fontSize: "0.875rem", textAlign: "center", color: "hsl(var(--muted-foreground))" }}>
-                                This is a placeholder auth page.
-                            </p>
-                        </CardContent>
-                    </StyledCard>
-                </motion.div>
-            </AuthContent>
-        </PageContainer>
-    );
+const Form = styled(motion.form)`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const SocialButtons = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+`;
+
+// --- Animations ---
+
+const slideVariants = {
+  hidden: { x: 20, opacity: 0 },
+  visible: { x: 0, opacity: 1 },
+  exit: { x: -20, opacity: 0 },
+};
+
+const Auth = ({ initialMode = "login" }) => {
+  const [mode, setMode] = useState(initialMode);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Sync internal state if URL allows direct navigation or prop update
+    if (initialMode && (initialMode === 'login' || initialMode === 'signup')) {
+      setMode(initialMode);
+    }
+  }, [initialMode]);
+
+  const handleTabChange = (newMode) => {
+    setMode(newMode);
+    // Optionally correct the URL without full reload
+    window.history.pushState(null, "", `/${newMode}`);
+  };
+
+  const isLogin = mode === "login";
+
+  return (
+    <PageContainer>
+      <Header />
+      <AuthLayout>
+        <AuthCard>
+          <TabsList>
+            <TabTrigger $active={isLogin} onClick={() => handleTabChange("login")}>
+              Login
+            </TabTrigger>
+            <TabTrigger $active={!isLogin} onClick={() => handleTabChange("signup")}>
+              Sign Up
+            </TabTrigger>
+          </TabsList>
+
+          <CardHeader>
+            <CardTitle>{isLogin ? "Welcome back" : "Create an account"}</CardTitle>
+            <CardDescription>
+              {isLogin
+                ? "Enter your email below to login to your account"
+                : "Enter your email below to create your account"}
+            </CardDescription>
+          </CardHeader>
+
+          <div style={{ padding: "0 1.5rem 1.5rem" }}>
+            <AnimatePresence mode="wait" initial={false}>
+              <Form
+                key={mode}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                variants={slideVariants}
+                transition={{ duration: 0.2 }}
+                onSubmit={(e) => e.preventDefault()}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" type="email" placeholder="m@example.com" />
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    <Label htmlFor="password">Password</Label>
+                    <Input id="password" type="password" />
+                  </div>
+                </div>
+
+                <Button type="submit" style={{ width: "100%" }}>
+                  {isLogin ? "Login" : "Sign Up"}
+                </Button>
+              </Form>
+            </AnimatePresence>
+
+            <Divider>
+              <span>Or continue with</span>
+            </Divider>
+
+            <SocialButtons>
+              <Button variant="outline">
+                <SimpleIcon icon={siGithub} style={{ marginRight: "0.5rem" }} />
+                Github
+              </Button>
+              <Button variant="outline">
+                <SimpleIcon icon={siGoogle} style={{ marginRight: "0.5rem" }} />
+                Google
+              </Button>
+            </SocialButtons>
+          </div>
+
+          <CardFooter style={{ justifyContent: "center" }}>
+            <p style={{ fontSize: "0.875rem", color: "hsl(var(--muted-foreground))" }}>
+              By clicking continue, you agree to our Terms of Service.
+            </p>
+          </CardFooter>
+        </AuthCard>
+      </AuthLayout>
+    </PageContainer>
+  );
 };
 
 export default Auth;

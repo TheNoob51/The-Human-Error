@@ -3,7 +3,7 @@ import styled from "styled-components";
 
 import Button from "./Button";
 
-import logo from "../assets/logo_main.png";
+import logo from "../assets/logo/logo_main.png";
 
 const HeaderContainer = styled.header`
   position: sticky;
