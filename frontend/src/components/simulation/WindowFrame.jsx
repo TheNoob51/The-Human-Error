@@ -72,35 +72,35 @@ const WindowContent = styled.div`
 `;
 
 const WindowFrame = ({ title, children, onClose }) => {
-    const { closeWindow } = useWindowManager();
+  const { closeWindow } = useWindowManager();
 
-    const handleClose = () => {
-        if (onClose) onClose();
-        else closeWindow();
-    };
+  const handleClose = () => {
+    if (onClose) onClose();
+    else closeWindow();
+  };
 
-    return (
-        <AnimatePresence>
-            <WindowContainer
-                initial={{ opacity: 0, scale: 0.95, x: '-50%', y: '-50%' }}
-                animate={{ opacity: 1, scale: 1, x: '-50%', y: '-50%' }}
-                exit={{ opacity: 0, scale: 0.95, x: '-50%', y: '-50%' }}
-                transition={{ duration: 0.2 }}
-            >
-                <TitleBar>
-                    <Title>{title}</Title>
-                    <WindowControls>
-                        <ControlButton $isClose onClick={handleClose}>
-                            <X size={14} />
-                        </ControlButton>
-                    </WindowControls>
-                </TitleBar>
-                <WindowContent>
-                    {children}
-                </WindowContent>
-            </WindowContainer>
-        </AnimatePresence>
-    );
+  return (
+    <AnimatePresence>
+      <WindowContainer
+        initial={{ opacity: 0, scale: 0.95, x: '-50%', y: '-50%' }}
+        animate={{ opacity: 1, scale: 1, x: '-50%', y: '-50%' }}
+        exit={{ opacity: 0, scale: 0.95, x: '-50%', y: '-50%' }}
+        transition={{ duration: 0.2 }}
+      >
+        <TitleBar>
+          <Title>{title}</Title>
+          <WindowControls>
+            <ControlButton $isClose onClick={handleClose}>
+              <X size={14} />
+            </ControlButton>
+          </WindowControls>
+        </TitleBar>
+        <WindowContent>
+          {children}
+        </WindowContent>
+      </WindowContainer>
+    </AnimatePresence>
+  );
 };
 
 export default WindowFrame;

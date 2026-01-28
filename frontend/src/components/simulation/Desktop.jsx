@@ -13,8 +13,7 @@ import { Mail, Globe } from 'lucide-react';
 const DesktopContainer = styled.div`
   width: 100vw;
   height: 100vh;
-  background: url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80') no-repeat center center fixed;
-  background-size: cover;
+  background: #1e3a8a; /* Professional blue */
   position: relative;
   overflow: hidden;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
