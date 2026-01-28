@@ -132,7 +132,7 @@ const Dashboard = () => {
     return (
         <PageContainer>
             {/* Top Navigation using reusable Header */}
-            <Header user={{ name: "John Doe", avatar: "JD" }} />
+            <Header />
 
             <MainContent as={motion.div} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
 

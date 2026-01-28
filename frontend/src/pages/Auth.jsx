@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../lib/firebase";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "../components/Card";
 import Button from "../components/Button";
 import Input from "../components/Input";
@@ -145,6 +147,26 @@ const Auth = ({ initialMode = "login" }) => {
 
   const isLogin = mode === "login";
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    try {
+      if (isLogin) {
+        await signInWithEmailAndPassword(auth, email, password);
+        navigate("/dashboard");
+      } else {
+        await createUserWithEmailAndPassword(auth, email, password);
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      console.error(err);
+      // Suppress weak password alert
+      if (err.message.includes("weak-password")) return;
+      setError(err.message.replace("Firebase: ", ""));
+    }
+  };
+
   return (
     <PageContainer>
       <Header />
@@ -177,20 +199,7 @@ const Auth = ({ initialMode = "login" }) => {
                 exit="exit"
                 variants={slideVariants}
                 transition={{ duration: 0.2 }}
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setError("");
-                  if (isLogin) {
-                    if (email === "test@gmail.com" && password === "123456") {
-                      navigate("/dashboard");
-                    } else {
-                      setError("Invalid email or password");
-                    }
-                  } else {
-                    // Fake signup
-                    navigate("/dashboard");
-                  }
-                }}
+                onSubmit={handleSubmit}
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
