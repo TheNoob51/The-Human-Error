@@ -7,9 +7,9 @@ export const useWindowManager = () => useContext(WindowManagerContext);
 export const WindowManagerProvider = ({ children }) => {
     // Windows state: { id: string, isOpen: boolean, zIndex: number }
     const [windows, setWindows] = useState([
-        { id: 'mail', isOpen: false, zIndex: 1, isMinimized: false },
-        { id: 'browser', isOpen: false, zIndex: 1, isMinimized: false },
-        { id: 'alert', isOpen: false, zIndex: 1, isMinimized: false }
+        { id: 'mail', isOpen: false, zIndex: 1, isMinimized: false, isMaximized: false },
+        { id: 'browser', isOpen: false, zIndex: 1, isMinimized: false, isMaximized: false },
+        { id: 'alert', isOpen: false, zIndex: 1, isMinimized: false, isMaximized: false }
     ]);
 
     // Track the highest z-index to bring windows to front
@@ -48,6 +48,14 @@ export const WindowManagerProvider = ({ children }) => {
         );
     };
 
+    const toggleMaximizeWindow = (id) => {
+        setWindows(prev =>
+            prev.map(window =>
+                window.id === id ? { ...window, isMaximized: !window.isMaximized } : window
+            )
+        );
+    };
+
     const focusWindow = (id) => {
         setWindows(prev => {
             const target = prev.find(w => w.id === id);
@@ -79,6 +87,7 @@ export const WindowManagerProvider = ({ children }) => {
                 openWindow,
                 closeWindow,
                 minimizeWindow,
+                toggleMaximizeWindow,
                 focusWindow,
                 isShuttingDown,
                 startShutdown,

@@ -71,7 +71,7 @@ const Content = styled.div`
 `;
 
 const SimulationWindow = ({ id, title, icon, children, width = 800, height = 600, defaultX = 50, defaultY = 50 }) => {
-  const { windows, closeWindow, focusWindow, minimizeWindow } = useWindowManager();
+  const { windows, closeWindow, focusWindow, minimizeWindow, toggleMaximizeWindow } = useWindowManager();
 
   const windowState = windows.find(w => w.id === id);
 
@@ -82,6 +82,7 @@ const SimulationWindow = ({ id, title, icon, children, width = 800, height = 600
   // Calculate focus state
   const maxZ = Math.max(...windows.map(w => w.zIndex));
   const isFocused = windowState?.zIndex === maxZ;
+  const isMaximized = windowState?.isMaximized;
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -108,6 +109,7 @@ const SimulationWindow = ({ id, title, icon, children, width = 800, height = 600
   }, [isDragging]);
 
   const handleMouseDown = (e) => {
+    if (isMaximized) return; // Disable drag when maximized
     setIsDragging(true);
     dragOffset.current = {
       x: e.clientX - position.x,
@@ -121,11 +123,12 @@ const SimulationWindow = ({ id, title, icon, children, width = 800, height = 600
   return (
     <WindowContainer
       style={{
-        width,
-        height,
+        width: isMaximized ? '100%' : width,
+        height: isMaximized ? 'calc(100% - 40px)' : height, // Subtract taskbar height if needed, assuming taskbar is 40px
+        top: isMaximized ? 0 : position.y,
+        left: isMaximized ? 0 : position.x,
         zIndex: windowState.zIndex,
-        top: position.y,
-        left: position.x,
+        borderRadius: isMaximized ? 0 : 8,
         boxShadow: isDragging
           ? '0 20px 50px rgba(0,0,0,0.3)'
           : isFocused
@@ -136,9 +139,16 @@ const SimulationWindow = ({ id, title, icon, children, width = 800, height = 600
       }}
       onMouseDown={() => focusWindow(id)}
       initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
+      animate={{
+        opacity: 1,
+        scale: 1,
+        width: isMaximized ? '100%' : width,
+        height: isMaximized ? 'calc(100% - 40px)' : height,
+        top: isMaximized ? 0 : position.y,
+        left: isMaximized ? 0 : position.x
+      }}
       exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.15 }}
+      transition={{ duration: 0.2 }} // Slightly smoother for maximize
     >
       <TitleBar
         onMouseDown={handleMouseDown}
@@ -158,8 +168,11 @@ const SimulationWindow = ({ id, title, icon, children, width = 800, height = 600
           }}>
             <Minus size={16} />
           </ControlButton>
-          <ControlButton onClick={(e) => e.stopPropagation()}>
-            <Square size={14} />
+          <ControlButton onClick={(e) => {
+            e.stopPropagation();
+            toggleMaximizeWindow(id);
+          }}>
+            <Square size={14} style={{ strokeWidth: isMaximized ? 3 : 2 }} />
           </ControlButton>
           <ControlButton $isClose onClick={(e) => {
             e.stopPropagation();
