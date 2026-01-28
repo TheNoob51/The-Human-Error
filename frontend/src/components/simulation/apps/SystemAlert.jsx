@@ -75,40 +75,31 @@ const Button = styled.button`
 `;
 
 const SystemAlert = () => {
-    const { closeWindow } = useWindowManager();
+  const { closeWindow } = useWindowManager();
 
-    return (
-        <AnimatePresence>
-            <Overlay
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-            >
-                <AlertBox
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                >
-                    <AlertHeader>
-                        <span>System Security Warning</span>
-                        <X size={18} style={{ cursor: 'pointer' }} onClick={closeWindow} />
-                    </AlertHeader>
-                    <AlertBody>
-                        <AlertOctagon size={48} color="#d93025" />
-                        <Message>
-                            <strong>Security Alert Detected</strong>
-                            <br /><br />
-                            Malicious activity was detected on your workstation. Immediate action is required to prevent data loss.
-                        </Message>
-                        <ButtonGroup>
-                            <Button $primary>Resolve Now</Button>
-                            <Button onClick={closeWindow}>Ignore</Button>
-                        </ButtonGroup>
-                    </AlertBody>
-                </AlertBox>
-            </Overlay>
-        </AnimatePresence>
-    );
+  return (
+    <AlertBox
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      style={{ width: '100%', height: '100%', border: 'none', boxShadow: 'none' }}
+    >
+      <AlertHeader>
+        <span>System Security Warning</span>
+      </AlertHeader>
+      <AlertBody>
+        <AlertOctagon size={48} color="#d93025" />
+        <Message>
+          <strong>Security Alert Detected</strong>
+          <br /><br />
+          Malicious activity was detected on your workstation. Immediate action is required to prevent data loss.
+        </Message>
+        <ButtonGroup>
+          <Button $primary onClick={() => closeWindow('alert')}>Resolve Now</Button>
+          <Button onClick={() => closeWindow('alert')}>Ignore</Button>
+        </ButtonGroup>
+      </AlertBody>
+    </AlertBox>
+  );
 };
 
 export default SystemAlert;

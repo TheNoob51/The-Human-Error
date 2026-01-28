@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import WindowFrame from '../WindowFrame';
+
 import { User, AlertCircle } from 'lucide-react';
 
 const MailLayout = styled.div`
@@ -121,50 +121,48 @@ const SecondaryButton = styled.button`
 `;
 
 const MailApp = () => {
-    return (
-        <WindowFrame title="Mail">
-            <MailLayout>
-                <Sidebar>
-                    <MailItem $active>
-                        <Sender>IT Support</Sender>
-                        <Subject>URGENT: Action Required</Subject>
-                    </MailItem>
-                    <MailItem>
-                        <Sender>Marketing Team</Sender>
-                        <Subject>Newsletter for Jan...</Subject>
-                    </MailItem>
-                    <MailItem>
-                        <Sender>HR Department</Sender>
-                        <Subject>Holiday Calendar</Subject>
-                    </MailItem>
-                </Sidebar>
-                <Content>
-                    <Header>
-                        <HeaderTitle>URGENT: Account Verification Required</HeaderTitle>
-                        <HeaderInfo>
-                            <Avatar><User size={16} /></Avatar>
-                            <div>
-                                <div><strong>From:</strong> IT Support &lt;support@company-security-update.com&gt;</div>
-                                <div><strong>To:</strong> clean.user@company.com</div>
-                            </div>
-                        </HeaderInfo>
-                    </Header>
-                    <Body>
-                        <p>Dear User,</p>
-                        <p>Your account has been flagged for suspicious activity. To prevent lockout, you must verify your identity within 10 minutes.</p>
-                        <p>Failure to report could result in permanent loss of access.</p>
+  return (
+    <MailLayout>
+      <Sidebar>
+        <MailItem $active>
+          <Sender>IT Support</Sender>
+          <Subject>URGENT: Action Required</Subject>
+        </MailItem>
+        <MailItem>
+          <Sender>Marketing Team</Sender>
+          <Subject>Newsletter for Jan...</Subject>
+        </MailItem>
+        <MailItem>
+          <Sender>HR Department</Sender>
+          <Subject>Holiday Calendar</Subject>
+        </MailItem>
+      </Sidebar>
+      <Content>
+        <Header>
+          <HeaderTitle>URGENT: Account Verification Required</HeaderTitle>
+          <HeaderInfo>
+            <Avatar><User size={16} /></Avatar>
+            <div>
+              <div><strong>From:</strong> IT Support &lt;support@company-security-update.com&gt;</div>
+              <div><strong>To:</strong> clean.user@company.com</div>
+            </div>
+          </HeaderInfo>
+        </Header>
+        <Body>
+          <p>Dear User,</p>
+          <p>Your account has been flagged for suspicious activity. To prevent lockout, you must verify your identity within 10 minutes.</p>
+          <p>Failure to report could result in permanent loss of access.</p>
 
-                        <FakeLinkButton>Verify Account Now</FakeLinkButton>
-                    </Body>
+          <FakeLinkButton>Verify Account Now</FakeLinkButton>
+        </Body>
 
-                    <ActionRow>
-                        <SecondaryButton>Inspect Sender</SecondaryButton>
-                        <SecondaryButton $danger>Report Phishing</SecondaryButton>
-                    </ActionRow>
-                </Content>
-            </MailLayout>
-        </WindowFrame>
-    );
+        <ActionRow>
+          <SecondaryButton>Inspect Sender</SecondaryButton>
+          <SecondaryButton $danger>Report Phishing</SecondaryButton>
+        </ActionRow>
+      </Content>
+    </MailLayout>
+  );
 };
 
 export default MailApp;

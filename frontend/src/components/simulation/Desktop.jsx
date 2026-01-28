@@ -9,6 +9,7 @@ import SystemAlert from './apps/SystemAlert';
 import ShutdownScreen from './ShutdownScreen';
 import ShutdownModal from './ShutdownModal';
 import { Mail, Globe } from 'lucide-react';
+import SimulationWindow from './SimulationWindow';
 
 const DesktopContainer = styled.div`
   width: 100vw;
@@ -29,8 +30,10 @@ const ContentArea = styled.div`
   align-items: center;
 `;
 
+
+
 const Desktop = () => {
-    const { isShutdown, activeWindow, openWindow } = useWindowManager();
+    const { isShutdown, openWindow } = useWindowManager();
 
     if (isShutdown) {
         return <ShutdownScreen />;
@@ -52,9 +55,37 @@ const Desktop = () => {
                     />
                 </div>
 
-                {activeWindow === 'mail' && <MailApp />}
-                {activeWindow === 'browser' && <BrowserApp />}
-                {activeWindow === 'alert' && <SystemAlert />}
+                <SimulationWindow
+                    id="mail"
+                    title="Inbox - Corporate Mail"
+                    icon={<Mail size={16} />}
+                    defaultX={100}
+                    defaultY={50}
+                >
+                    <MailApp />
+                </SimulationWindow>
+
+                <SimulationWindow
+                    id="browser"
+                    title="Employee Portal - Edge"
+                    icon={<Globe size={16} />}
+                    defaultX={150}
+                    defaultY={80}
+                >
+                    <BrowserApp />
+                </SimulationWindow>
+
+                <SimulationWindow
+                    id="alert"
+                    title="System Alert"
+                    icon={<Mail size={16} />} // Using Mail icon as generic system icon for now
+                    defaultX={300}
+                    defaultY={200}
+                    width={400}
+                    height={200}
+                >
+                    <SystemAlert />
+                </SimulationWindow>
 
                 <ShutdownModal />
             </ContentArea>

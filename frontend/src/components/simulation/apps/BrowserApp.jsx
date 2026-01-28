@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import WindowFrame from '../WindowFrame';
+
 import { RefreshCw, ArrowLeft, ArrowRight, XCircle } from 'lucide-react';
 
 const BrowserLayout = styled.div`
@@ -102,37 +102,35 @@ const SubmitButton = styled.button`
 `;
 
 const BrowserApp = () => {
-    return (
-        <WindowFrame title="Browser">
-            <BrowserLayout>
-                <AddressBar>
-                    <ArrowLeft size={16} color="#888" />
-                    <ArrowRight size={16} color="#888" />
-                    <RefreshCw size={14} color="#5f6368" />
-                    <UrlInput>
-                        <span role="img" aria-label="lock">🔒</span> company-portal-login-secure.net/auth
-                    </UrlInput>
-                </AddressBar>
+  return (
+    <BrowserLayout>
+      <AddressBar>
+        <ArrowLeft size={16} color="#888" />
+        <ArrowRight size={16} color="#888" />
+        <RefreshCw size={14} color="#5f6368" />
+        <UrlInput>
+          <span role="img" aria-label="lock">🔒</span> company-portal-login-secure.net/auth
+        </UrlInput>
+      </AddressBar>
 
-                <ExpiryBanner>
-                    <XCircle size={16} />
-                    <span>Session expired. Please login again to continue.</span>
-                </ExpiryBanner>
+      <ExpiryBanner>
+        <XCircle size={16} />
+        <span>Session expired. Please login again to continue.</span>
+      </ExpiryBanner>
 
-                <WebContent>
-                    <LoginForm>
-                        <Logo>Company Corp</Logo>
-                        <div style={{ textAlign: 'left', fontSize: '14px', marginBottom: '5px' }}>Email</div>
-                        <Input type="text" placeholder="user@company.com" />
-                        <div style={{ textAlign: 'left', fontSize: '14px', marginBottom: '5px' }}>Password</div>
-                        <Input type="password" placeholder="********" />
-                        <SubmitButton>Sign In</SubmitButton>
-                        <div style={{ marginTop: '15px', fontSize: '12px', color: '#1a73e8', cursor: 'pointer' }}>Forgot password?</div>
-                    </LoginForm>
-                </WebContent>
-            </BrowserLayout>
-        </WindowFrame>
-    );
+      <WebContent>
+        <LoginForm>
+          <Logo>Company Corp</Logo>
+          <div style={{ textAlign: 'left', fontSize: '14px', marginBottom: '5px' }}>Email</div>
+          <Input type="text" placeholder="user@company.com" />
+          <div style={{ textAlign: 'left', fontSize: '14px', marginBottom: '5px' }}>Password</div>
+          <Input type="password" placeholder="********" />
+          <SubmitButton>Sign In</SubmitButton>
+          <div style={{ marginTop: '15px', fontSize: '12px', color: '#1a73e8', cursor: 'pointer' }}>Forgot password?</div>
+        </LoginForm>
+      </WebContent>
+    </BrowserLayout>
+  );
 };
 
 export default BrowserApp;
