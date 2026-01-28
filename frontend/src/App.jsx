@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import TurnSimulation from "./pages/TurnSimulation";
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/login" element={<Auth initialMode="login" />} />
         <Route path="/signup" element={<Auth initialMode="signup" />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/simulation" element={<TurnSimulation />} />
       </Routes>
     </Router>
   );

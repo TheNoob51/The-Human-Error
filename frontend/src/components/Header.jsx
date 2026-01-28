@@ -77,7 +77,7 @@ const Header = ({ user }) => {
         <NavActions>
           {user ? (
             <>
-              <Button size="sm" onClick={() => console.log("Start Simulation")}>
+              <Button size="sm" onClick={() => navigate("/simulation")}>
                 Start Simulation
               </Button>
               <UserProfile>

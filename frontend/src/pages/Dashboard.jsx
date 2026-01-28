@@ -230,7 +230,11 @@ const Dashboard = () => {
                             <p style={{ lineHeight: 1.6, marginBottom: "1.5rem" }}>
                                 You show a vulnerability to <strong>urgency-based</strong> social engineering triggers. Attackers use this to bypass critical thinking.
                             </p>
-                            <Button variant="outline" style={{ width: "100%", backgroundColor: "hsl(var(--background))" }}>
+                            <Button
+                                variant="outline"
+                                style={{ width: "100%", backgroundColor: "hsl(var(--background))" }}
+                                onClick={() => navigate("/simulation")}
+                            >
                                 Start Urgency Training
                             </Button>
                         </CardContent>
