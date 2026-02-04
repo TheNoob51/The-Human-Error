@@ -18,14 +18,14 @@ export const WindowManagerProvider = ({ children }) => {
     const [isShuttingDown, setIsShuttingDown] = useState(false);
     const [isShutdown, setIsShutdown] = useState(false);
 
-    const openWindow = (id) => {
+    const openWindow = (id, data = null) => {
         setWindows(prev => {
             const newMax = maxZIndex + 1;
             setMaxZIndex(newMax);
 
             return prev.map(window => {
                 if (window.id === id) {
-                    return { ...window, isOpen: true, zIndex: newMax, isMinimized: false };
+                    return { ...window, isOpen: true, zIndex: newMax, isMinimized: false, data: data };
                 }
                 return window;
             });
@@ -35,7 +35,7 @@ export const WindowManagerProvider = ({ children }) => {
     const closeWindow = (id) => {
         setWindows(prev =>
             prev.map(window =>
-                window.id === id ? { ...window, isOpen: false, isMinimized: false } : window
+                window.id === id ? { ...window, isOpen: false, isMinimized: false, data: null } : window
             )
         );
     };

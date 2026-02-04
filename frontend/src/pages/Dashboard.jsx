@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -128,6 +128,52 @@ const Table = styled.table`
 
 const Dashboard = () => {
     const navigate = useNavigate();
+    const [history, setHistory] = useState([]);
+    const [stats, setStats] = useState({
+        score: 72,
+        completed: 12,
+        recentRisk: 'High'
+    });
+
+    useEffect(() => {
+        let stored = [];
+        try {
+            stored = JSON.parse(localStorage.getItem('simulation_results') || '[]');
+            if (!Array.isArray(stored)) stored = [];
+        } catch (e) {
+            console.error("Failed to parse simulation results", e);
+            stored = [];
+        }
+
+        // Mock initial history if empty for demo purposes (optional, but good for first view)
+        // Or just let it be empty/static initially. State earlier had static rows.
+        // Let's combine static + dynamic.
+        const staticHistory = [
+            { scenario: "Urgent Payroll Update", action: "clicked_link", riskLevel: "HIGH", timestamp: "2025-10-24" },
+            { scenario: "CEO Gift Card Request", action: "reported", riskLevel: "LOW", timestamp: "2025-10-20" },
+        ];
+
+        // We prioritize local results
+        const combined = [...stored, ...staticHistory];
+        setHistory(combined);
+
+        // Calculate Stats
+        const total = combined.length;
+        // Simple mock score calculation: Start at 100, subtract 20 for High, 10 for Medium
+        let calculatedScore = 100;
+        combined.forEach(r => {
+            if (r.riskLevel === 'HIGH') calculatedScore -= 20;
+            if (r.riskLevel === 'MEDIUM') calculatedScore -= 10;
+        });
+        calculatedScore = Math.max(0, calculatedScore); // clamp
+
+        setStats({
+            score: calculatedScore,
+            completed: total,
+            recentRisk: stored[0]?.riskLevel || 'N/A'
+        });
+
+    }, []);
 
     return (
         <PageContainer>
@@ -151,10 +197,10 @@ const Dashboard = () => {
                         </CardHeader>
                         <CardContent>
                             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                                <MetricValue>72<span style={{ fontSize: "1.25rem", color: "hsl(var(--muted-foreground))", fontWeight: 400 }}>/100</span></MetricValue>
-                                <AlertTriangle size={24} color="hsl(38, 92%, 50%)" />
+                                <MetricValue>{stats.score}<span style={{ fontSize: "1.25rem", color: "hsl(var(--muted-foreground))", fontWeight: 400 }}>/100</span></MetricValue>
+                                <AlertTriangle size={24} color={stats.score < 50 ? "#ef4444" : "hsl(38, 92%, 50%)"} />
                             </div>
-                            <Progress value={72} style={{ marginTop: "1rem", marginBottom: "0.5rem" }} />
+                            <Progress value={stats.score} style={{ marginTop: "1rem", marginBottom: "0.5rem" }} />
                             <MetricLabel>Higher score indicates lower susceptibility.</MetricLabel>
                         </CardContent>
                     </Card>
@@ -181,7 +227,7 @@ const Dashboard = () => {
                         </CardHeader>
                         <CardContent>
                             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                                <MetricValue>3</MetricValue>
+                                <MetricValue>{stats.completed}</MetricValue>
                                 <CheckCircle size={24} color="hsl(142, 76%, 36%)" />
                             </div>
                             <MetricLabel>Total scenarios interaction completed.</MetricLabel>
@@ -259,34 +305,28 @@ const Dashboard = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td style={{ fontWeight: 500 }}>Urgent Payroll Update</td>
-                                        <td>Urgency</td>
-                                        <td>Clicked Link</td>
-                                        <td>Oct 24, 2025</td>
-                                        <td><Badge variant="destructive">Failed</Badge></td>
-                                    </tr>
-                                    <tr>
-                                        <td style={{ fontWeight: 500 }}>CEO Gift Card Request</td>
-                                        <td>Authority</td>
-                                        <td>Reported Phishing</td>
-                                        <td>Oct 20, 2025</td>
-                                        <td><Badge variant="success">Safe</Badge></td>
-                                    </tr>
-                                    <tr>
-                                        <td style={{ fontWeight: 500 }}>IT Password Reset</td>
-                                        <td>Technical</td>
-                                        <td>Entered Creds</td>
-                                        <td>Oct 15, 2025</td>
-                                        <td><Badge variant="destructive">Failed</Badge></td>
-                                    </tr>
-                                    <tr>
-                                        <td style={{ fontWeight: 500 }}>Free Conference Ticket</td>
-                                        <td>Reward</td>
-                                        <td>Ignored</td>
-                                        <td>Oct 10, 2025</td>
-                                        <td><Badge variant="success">Safe</Badge></td>
-                                    </tr>
+                                    {history.map((item, index) => (
+                                        <tr key={index}>
+                                            <td style={{ fontWeight: 500 }}>
+                                                {item.scenario === 'phishing_email' ? 'Account Verification Phish' : item.scenario}
+                                            </td>
+                                            <td>
+                                                {item.scenario === 'phishing_email' ? 'Credential Harvesting' : 'Social Engineering'}
+                                            </td>
+                                            <td>
+                                                {item.action === 'credentials_entered' && 'Entered Creds'}
+                                                {item.action === 'legit_link_clicked' && 'Safe Link Clicked'}
+                                                {item.action === 'reported' && 'Reported'}
+                                                {!['credentials_entered', 'legit_link_clicked', 'reported'].includes(item.action) && item.action}
+                                            </td>
+                                            <td>{item.timestamp ? new Date(item.timestamp).toLocaleDateString() : 'N/A'}</td>
+                                            <td>
+                                                {item.riskLevel === 'HIGH' && <Badge variant="destructive">Failed</Badge>}
+                                                {item.riskLevel === 'MEDIUM' && <Badge variant="warning">Warning</Badge>}
+                                                {item.riskLevel === 'LOW' && <Badge variant="success">Safe</Badge>}
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </Table>
                         </div>
