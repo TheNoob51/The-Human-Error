@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import styled from 'styled-components';
+import { useWindowManager } from '../WindowManager';
+import { useSimulation } from '../../../context/SimulationContext';
+import { PHISHING_INTERACTIONS } from '../../../constants';
 
 import { User, AlertCircle } from 'lucide-react';
 
@@ -121,45 +124,100 @@ const SecondaryButton = styled.button`
 `;
 
 const MailApp = () => {
+  const { openWindow } = useWindowManager();
+  // Consume inbox and selection logic from context
+  const {
+    logInteraction,
+    inbox,
+    markAsRead,
+    selectedEmailId,
+    nextScenario // keeping this if we want to force-next still, but timer handles it mostly
+  } = useSimulation();
+
+  // Find the selected email object
+  const selectedEmail = inbox.find(e => e.id === selectedEmailId) || inbox[0] || null;
+
+  // If no email selected (shouldn't happen if inbox has default), fallback
+  const scenario = selectedEmail || {
+    senderName: "No Mail",
+    senderEmail: "",
+    subject: "Inbox Empty",
+    body: "<p>No emails to display.</p>",
+    linkText: "",
+    linkUrl: "",
+    clues: []
+  };
+
+  useEffect(() => {
+    if (selectedEmail && !selectedEmail.isRead) {
+      logInteraction(PHISHING_INTERACTIONS.EMAIL_OPENED, { emailId: selectedEmail.id });
+      markAsRead(selectedEmail.id);
+    }
+  }, [selectedEmail, logInteraction, markAsRead]);
+
+  const handleVerifyClick = () => {
+    if (!scenario.linkUrl) return;
+    logInteraction(PHISHING_INTERACTIONS.FAKE_LINK_CLICKED, { link: scenario.linkUrl, emailId: scenario.id });
+    openWindow('browser');
+  };
+
+  const handleInspectSender = () => {
+    logInteraction(PHISHING_INTERACTIONS.INSPECT_SENDER, { emailId: scenario.id });
+    const domain = scenario.senderEmail.split('@')[1] || 'unknown';
+    alert(`Sender Domain: ${domain} (Suspicious)`);
+  };
+
+  const handleReportPhishing = () => {
+    logInteraction(PHISHING_INTERACTIONS.REPORT_PHISHING, { emailId: scenario.id });
+    alert("Phishing reported! It has been removed from your queue (simulated).");
+    // Maybe remove from inbox or just mark as handled? 
+    // For now, let's just leave it.
+  };
+
   return (
     <MailLayout>
       <Sidebar>
-        <MailItem $active>
-          <Sender>IT Support</Sender>
-          <Subject>URGENT: Action Required</Subject>
-        </MailItem>
-        <MailItem>
-          <Sender>Marketing Team</Sender>
-          <Subject>Newsletter for Jan...</Subject>
-        </MailItem>
-        <MailItem>
-          <Sender>HR Department</Sender>
-          <Subject>Holiday Calendar</Subject>
-        </MailItem>
+        {inbox.map(email => (
+          <MailItem
+            key={email.id}
+            $active={selectedEmailId === email.id}
+            onClick={() => markAsRead(email.id)} // This selects it via context update
+          >
+            <Sender>{email.senderName}</Sender>
+            <Subject style={{ fontWeight: email.isRead ? 'normal' : 'bold' }}>
+              {email.subject}
+            </Subject>
+          </MailItem>
+        ))}
       </Sidebar>
       <Content>
-        <Header>
-          <HeaderTitle>URGENT: Account Verification Required</HeaderTitle>
-          <HeaderInfo>
-            <Avatar><User size={16} /></Avatar>
-            <div>
-              <div><strong>From:</strong> IT Support &lt;support@company-security-update.com&gt;</div>
-              <div><strong>To:</strong> clean.user@company.com</div>
-            </div>
-          </HeaderInfo>
-        </Header>
-        <Body>
-          <p>Dear User,</p>
-          <p>Your account has been flagged for suspicious activity. To prevent lockout, you must verify your identity within 10 minutes.</p>
-          <p>Failure to report could result in permanent loss of access.</p>
+        {selectedEmail ? (
+          <>
+            <Header>
+              <HeaderTitle>{scenario.subject}</HeaderTitle>
+              <HeaderInfo>
+                <Avatar><User size={16} /></Avatar>
+                <div>
+                  <div><strong>From:</strong> {scenario.senderName} &lt;{scenario.senderEmail}&gt;</div>
+                  <div><strong>To:</strong> clean.user@company.com</div>
+                </div>
+              </HeaderInfo>
+            </Header>
+            <Body>
+              <div dangerouslySetInnerHTML={{ __html: scenario.body }} />
+              {scenario.linkText && (
+                <FakeLinkButton onClick={handleVerifyClick}>{scenario.linkText}</FakeLinkButton>
+              )}
+            </Body>
 
-          <FakeLinkButton>Verify Account Now</FakeLinkButton>
-        </Body>
-
-        <ActionRow>
-          <SecondaryButton>Inspect Sender</SecondaryButton>
-          <SecondaryButton $danger>Report Phishing</SecondaryButton>
-        </ActionRow>
+            <ActionRow>
+              <SecondaryButton onClick={handleInspectSender}>Inspect Sender</SecondaryButton>
+              <SecondaryButton $danger onClick={handleReportPhishing}>Report Phishing</SecondaryButton>
+            </ActionRow>
+          </>
+        ) : (
+          <div style={{ padding: 20, color: '#888' }}>Select an email to read</div>
+        )}
       </Content>
     </MailLayout>
   );

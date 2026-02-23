@@ -1,5 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
+import { useSimulation } from '../../../context/SimulationContext';
+import { PHISHING_INTERACTIONS } from '../../../constants';
 
 import { RefreshCw, ArrowLeft, ArrowRight, XCircle } from 'lucide-react';
 
@@ -102,6 +104,20 @@ const SubmitButton = styled.button`
 `;
 
 const BrowserApp = () => {
+  const { logInteraction, nextScenario } = useSimulation(); // removed endSimulation
+  const [url, setUrl] = React.useState('http://verify-account.security-check.com/login');
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    logInteraction(PHISHING_INTERACTIONS.CREDENTIALS_ENTERED);
+    alert("Credentials captured! (Simulation continues)");
+    // In a continuous loop, maybe we close the browser and load next scenario?
+    // Or just let them continue? Let's load next scenario to reset state for next round.
+    nextScenario();
+  };
+
   return (
     <BrowserLayout>
       <AddressBar>
@@ -125,7 +141,7 @@ const BrowserApp = () => {
           <Input type="text" placeholder="user@company.com" />
           <div style={{ textAlign: 'left', fontSize: '14px', marginBottom: '5px' }}>Password</div>
           <Input type="password" placeholder="********" />
-          <SubmitButton>Sign In</SubmitButton>
+          <SubmitButton onClick={handleLogin}>Sign In</SubmitButton>
           <div style={{ marginTop: '15px', fontSize: '12px', color: '#1a73e8', cursor: 'pointer' }}>Forgot password?</div>
         </LoginForm>
       </WebContent>

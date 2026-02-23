@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useWindowManager } from './WindowManager';
+import { useSimulation } from '../../context/SimulationContext';
 import Taskbar from './Taskbar';
 import DesktopIcon from './DesktopIcon';
 import MailApp from './apps/MailApp';
@@ -34,6 +35,7 @@ const ContentArea = styled.div`
 
 const Desktop = () => {
     const { isShutdown, openWindow } = useWindowManager();
+    const { endSimulation } = useSimulation();
 
     if (isShutdown) {
         return <ShutdownScreen />;
@@ -53,6 +55,25 @@ const Desktop = () => {
                         icon={<Globe size={24} />}
                         onClick={() => openWindow('browser')}
                     />
+                </div>
+
+                {/* Stop Simulation Button */}
+                <div style={{ position: 'absolute', top: 20, right: 20 }}>
+                    <button
+                        onClick={endSimulation}
+                        style={{
+                            background: '#d93025',
+                            color: 'white',
+                            border: 'none',
+                            padding: '10px 20px',
+                            borderRadius: '5px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+                        }}
+                    >
+                        Stop Simulation
+                    </button>
                 </div>
 
                 <SimulationWindow
