@@ -131,7 +131,7 @@ const MailApp = () => {
     inbox,
     markAsRead,
     selectedEmailId,
-    nextScenario // keeping this if we want to force-next still, but timer handles it mostly
+    loadNextEmail
   } = useSimulation();
 
   // Find the selected email object
@@ -159,6 +159,7 @@ const MailApp = () => {
     if (!scenario.linkUrl) return;
     logInteraction(PHISHING_INTERACTIONS.FAKE_LINK_CLICKED, { link: scenario.linkUrl, emailId: scenario.id });
     openWindow('browser');
+    loadNextEmail();
   };
 
   const handleInspectSender = () => {
@@ -169,9 +170,8 @@ const MailApp = () => {
 
   const handleReportPhishing = () => {
     logInteraction(PHISHING_INTERACTIONS.REPORT_PHISHING, { emailId: scenario.id });
-    alert("Phishing reported! It has been removed from your queue (simulated).");
-    // Maybe remove from inbox or just mark as handled? 
-    // For now, let's just leave it.
+    alert("Phishing reported!");
+    loadNextEmail();
   };
 
   return (

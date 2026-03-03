@@ -7,89 +7,92 @@ export const SimulationProvider = ({ children }) => {
     const [simulationState, setSimulationState] = useState('IDLE'); // IDLE, RUNNING, COMPLETED
     const [inbox, setInbox] = useState([]);
     const [selectedEmailId, setSelectedEmailId] = useState(null);
-    const [interactions, setInteractions] = useState([]);
-    const [result, setResult] = useState(null);
-
-    // Initial default emails
-    const defaultInbox = [
-        {
-            id: 'default-1',
-            senderName: "IT Support",
-            senderEmail: "support@company.com",
-            subject: "Welcome to the Cybersecurity Training",
-            body: "<p>Welcome! Please be aware of phishing attempts.</p>",
-            isRead: false,
-            timestamp: new Date().toISOString(),
-            isSafe: true // Internal flag
-        }
-    ];
+    const [session, setSession] = useState(null);
 
     const generateId = () => '_' + Math.random().toString(36).substr(2, 9);
 
+    const mockEmailQueue = [
+        {
+            id: generateId(),
+            senderName: "HR Department",
+            senderEmail: "hr@company-benefits-update.com",
+            subject: "Action Required: Update Your Benefits",
+            body: "<p>Dear Employee,</p><p>Please review and update your new benefits package for the upcoming year by clicking the link below.</p><p>Failure to do so may result in loss of coverage.</p>",
+            linkText: "Update Benefits Now",
+            linkUrl: "update-benefits",
+            clues: ["Suspicious sender domain", "Urgent consequence"],
+            timestamp: new Date().toISOString(),
+            isRead: false
+        },
+        {
+            id: generateId(),
+            senderName: "IT Service Desk",
+            senderEmail: "admin@it-support-portal.net",
+            subject: "Password Expiry Notice",
+            body: "<p>Your corporate password will expire in 2 hours.</p><p>Please log in immediately to retain your current password or set a new one.</p>",
+            linkText: "Keep Current Password",
+            linkUrl: "reset-password",
+            clues: ["Urgent timeline", "Suspicious sender domain"],
+            timestamp: new Date().toISOString(),
+            isRead: false
+        },
+        {
+            id: generateId(),
+            senderName: "CEO Office",
+            senderEmail: "ceo@company.com", // Spoofed legitimate address
+            subject: "Confidential: Q3 Bonus Requirements",
+            body: "<p>I am attaching the mandatory requirements to qualify for the Q3 discretionary bonus.</p><p>This is highly confidential. Please review the document here immediately.</p>",
+            linkText: "View Bonus Details",
+            linkUrl: "view-document",
+            clues: ["Unexpected request from leadership", "High pressure/reward"],
+            timestamp: new Date().toISOString(),
+            isRead: false
+        }
+    ];
+
     const startSimulation = useCallback(() => {
         setSimulationState('RUNNING');
-        setInbox(defaultInbox);
-        setSelectedEmailId(defaultInbox[0].id);
-        setInteractions([]);
-        setResult(null);
-        console.log('Simulation started');
+
+        // Push the first email from the queue into the inbox
+        const initialInbox = [mockEmailQueue[0]];
+        const remainingQueue = mockEmailQueue.slice(1);
+
+        setInbox(initialInbox);
+        setSelectedEmailId(initialInbox[0].id);
+
+        setSession({
+            sessionId: generateId(),
+            startTime: new Date().toISOString(),
+            interactions: [],
+            emailsGenerated: 1, // 1 in inbox
+            emailQueue: remainingQueue
+        });
+
+        console.log('Simulation started with sequential queue');
     }, []);
 
-    const fetchPhishingScenario = useCallback(async () => {
-        try {
-            const response = await fetch('http://localhost:5000/api/generate-phishing', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-            });
-            if (!response.ok) throw new Error('API request failed');
-            const data = await response.json();
+    const loadNextEmail = useCallback(() => {
+        setSession(prevSession => {
+            if (!prevSession || prevSession.emailQueue.length === 0) {
+                console.log("No more emails in queue.");
+                return prevSession; // Queue empty
+            }
+
+            const nextEmail = prevSession.emailQueue[0];
+            const updatedQueue = prevSession.emailQueue.slice(1);
+
+            // Update inbox
+            setInbox(prevInbox => [nextEmail, ...prevInbox]);
+            // (Optional) Select the new email automatically:
+            setSelectedEmailId(nextEmail.id);
+
             return {
-                ...data,
-                id: generateId(),
-                isRead: false,
-                timestamp: new Date().toISOString()
+                ...prevSession,
+                emailsGenerated: prevSession.emailsGenerated + 1,
+                emailQueue: updatedQueue
             };
-        } catch (error) {
-            console.error('Failed to fetch phishing scenario, using fallback:', error);
-            return {
-                id: generateId(),
-                senderName: "IT Support",
-                senderEmail: "support@company-security-update.com",
-                subject: "URGENT: Account Verification Required",
-                body: "<p>Dear User,</p><p>Your account has been flagged for suspicious activity. To prevent lockout, you must verify your identity within 10 minutes.</p><p>Failure to report could result in permanent loss of access.</p>",
-                linkText: "Verify Account Now",
-                linkUrl: "verify-account",
-                clues: ["Urgent language", "Suspicious sender domain", "Generic greeting"],
-                isRead: false,
-                timestamp: new Date().toISOString()
-            };
-        }
+        });
     }, []);
-
-    // Periodic Email Injection
-    React.useEffect(() => {
-        let interval;
-        if (simulationState === 'RUNNING') {
-            // Fetch one immediately if inbox is just defaults? 
-            // Or just wait 5s for the first "attack" then every 30s
-
-            const fetchAndAdd = async () => {
-                const newEmail = await fetchPhishingScenario();
-                setInbox(prev => [newEmail, ...prev]); // Add new email to top
-                // Play notification sound?
-            };
-
-            // Initial fetch after 2 seconds to get the game going
-            const initialTimer = setTimeout(fetchAndAdd, 2000);
-
-            interval = setInterval(fetchAndAdd, 30000); // Every 30 seconds
-
-            return () => {
-                clearTimeout(initialTimer);
-                clearInterval(interval);
-            };
-        }
-    }, [simulationState, fetchPhishingScenario]);
 
     const markAsRead = useCallback((id) => {
         setInbox(prev => prev.map(email =>
@@ -104,7 +107,13 @@ export const SimulationProvider = ({ children }) => {
             type,
             details,
         };
-        setInteractions((prev) => [...prev, interaction]);
+        setSession((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                interactions: [...prev.interactions, interaction]
+            };
+        });
         console.log('Interaction logged:', interaction);
     }, []);
 
@@ -135,42 +144,58 @@ export const SimulationProvider = ({ children }) => {
         return 'LOW';
     };
 
-    const endSimulation = useCallback(() => {
+    const endSimulation = useCallback(async () => {
+        if (!session) return;
         setSimulationState('COMPLETED');
-        const finalRiskLevel = calculateRisk(interactions);
 
-        const finalResult = {
-            inbox: inbox,
-            interactions,
+        const finalRiskLevel = calculateRisk(session.interactions);
+        let explanation = "Simulation finished. Analysis could not be generated.";
+
+        try {
+            const response = await fetch('http://localhost:5000/api/generate-explanation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ interactions: session.interactions, finalRiskLevel })
+            });
+            if (response.ok) {
+                const data = await response.json();
+                explanation = data.explanation;
+            }
+        } catch (err) {
+            console.error("Failed to generate explanation:", err);
+        }
+
+        const finalSession = {
+            ...session,
+            endTime: new Date().toISOString(),
             finalRiskLevel,
-            timestamp: new Date().toISOString(),
+            explanation,
+            inbox // Save inbox state if needed for review
         };
 
-        setResult(finalResult);
-        console.log('Simulation ended. Result:', finalResult);
+        setSession(finalSession);
 
         // Save to localStorage
         try {
             const existingResults = JSON.parse(localStorage.getItem('simulation_results') || '[]');
-            const newResults = [finalResult, ...existingResults]; // Append new results (latest first)
+            const newResults = [finalSession, ...existingResults]; // Append new results (latest first)
             localStorage.setItem('simulation_results', JSON.stringify(newResults));
             console.log('Result saved to localStorage');
         } catch (error) {
             console.error('Failed to save simulation result:', error);
         }
 
-    }, [inbox, interactions]);
+    }, [session, inbox]);
 
     const value = {
         simulationState,
         inbox,
         selectedEmailId,
-        interactions,
-        result,
+        session,
         startSimulation,
         logInteraction,
         endSimulation,
-        fetchPhishingScenario,
+        loadNextEmail,
         markAsRead,
     };
 

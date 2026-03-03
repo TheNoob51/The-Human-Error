@@ -128,6 +128,56 @@ const Table = styled.table`
 
 const Dashboard = () => {
     const navigate = useNavigate();
+    const [results, setResults] = useState([]);
+    const [metrics, setMetrics] = useState({
+        totalSimulations: 0,
+        highRiskCount: 0,
+        lowRiskCount: 0,
+        averageRiskScore: 0,
+    });
+
+    useState(() => {
+        try {
+            const stored = JSON.parse(localStorage.getItem('simulation_results') || '[]');
+            setResults(stored);
+
+            if (stored.length > 0) {
+                let high = 0;
+                let low = 0;
+                let totalScore = 0;
+
+                const riskMap = {
+                    'VERY_HIGH': 0,
+                    'HIGH': 1,
+                    'MEDIUM': 2,
+                    'LOW': 3
+                };
+
+                stored.forEach(session => {
+                    const risk = session.finalRiskLevel || 'LOW';
+                    if (risk === 'VERY_HIGH' || risk === 'HIGH') high++;
+                    if (risk === 'MEDIUM' || risk === 'LOW') low++;
+                    totalScore += riskMap[risk];
+                });
+
+                // Calculate average (0 to 3 scale)
+                const avg = totalScore / stored.length;
+                // Convert to percentage (0 to 100) where 3 is 100% and 0 is 0%
+                const avgPercentage = Math.round((avg / 3) * 100);
+
+                setMetrics({
+                    totalSimulations: stored.length,
+                    highRiskCount: high,
+                    lowRiskCount: low,
+                    averageRiskScore: avgPercentage
+                });
+            }
+        } catch (error) {
+            console.error("Failed to load simulation results:", error);
+        }
+    }, []);
+
+    const recentSession = results[0] || null;
 
     return (
         <PageContainer>
@@ -151,25 +201,36 @@ const Dashboard = () => {
                         </CardHeader>
                         <CardContent>
                             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                                <MetricValue>72<span style={{ fontSize: "1.25rem", color: "hsl(var(--muted-foreground))", fontWeight: 400 }}>/100</span></MetricValue>
-                                <AlertTriangle size={24} color="hsl(38, 92%, 50%)" />
+                                <MetricValue>{metrics.averageRiskScore}<span style={{ fontSize: "1.25rem", color: "hsl(var(--muted-foreground))", fontWeight: 400 }}>/100</span></MetricValue>
+                                {metrics.averageRiskScore < 50 ? (
+                                    <AlertTriangle size={24} color="hsl(var(--destructive))" />
+                                ) : (
+                                    <ShieldAlert size={24} color="hsl(38, 92%, 50%)" />
+                                )}
                             </div>
-                            <Progress value={72} style={{ marginTop: "1rem", marginBottom: "0.5rem" }} />
+                            <Progress value={metrics.averageRiskScore} style={{ marginTop: "1rem", marginBottom: "0.5rem" }} />
                             <MetricLabel>Higher score indicates lower susceptibility.</MetricLabel>
                         </CardContent>
                     </Card>
 
-                    {/* Card 2: Behavior Profile */}
+                    {/* Card 2: Risk Profile */}
                     <Card>
                         <CardHeader>
-                            <CardTitle style={{ fontSize: "1rem" }}>Behavior Profile</CardTitle>
+                            <CardTitle style={{ fontSize: "1rem" }}>Risk Profile</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div style={{ marginBottom: "1rem" }}>
-                                <Badge variant="warning">Rushed under urgency</Badge>
+                            <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", marginTop: "0.5rem" }}>
+                                <div style={{ textAlign: "center", flex: 1, backgroundColor: "hsl(var(--destructive)/0.1)", borderRadius: "8px", padding: "10px" }}>
+                                    <div style={{ fontSize: "2rem", fontWeight: "bold", color: "hsl(var(--destructive))" }}>{metrics.highRiskCount}</div>
+                                    <div style={{ fontSize: "0.75rem", color: "hsl(var(--muted-foreground))" }}>HIGH RISK</div>
+                                </div>
+                                <div style={{ textAlign: "center", flex: 1, backgroundColor: "hsl(var(--success)/0.1)", borderRadius: "8px", padding: "10px" }}>
+                                    <div style={{ fontSize: "2rem", fontWeight: "bold", color: "hsl(var(--success))" }}>{metrics.lowRiskCount}</div>
+                                    <div style={{ fontSize: "0.75rem", color: "hsl(var(--muted-foreground))" }}>LOW RISK</div>
+                                </div>
                             </div>
-                            <p style={{ fontSize: "0.925rem", lineHeight: 1.5 }}>
-                                Tends to act quickly when faced with time-sensitive requests, often skipping verification steps.
+                            <p style={{ fontSize: "0.85rem", lineHeight: 1.4, color: "hsl(var(--muted-foreground))", textAlign: "center" }}>
+                                Historical baseline of susceptibility across all simulated encounters.
                             </p>
                         </CardContent>
                     </Card>
@@ -181,10 +242,10 @@ const Dashboard = () => {
                         </CardHeader>
                         <CardContent>
                             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                                <MetricValue>3</MetricValue>
+                                <MetricValue>{metrics.totalSimulations}</MetricValue>
                                 <CheckCircle size={24} color="hsl(142, 76%, 36%)" />
                             </div>
-                            <MetricLabel>Total scenarios interaction completed.</MetricLabel>
+                            <MetricLabel>Total scenarios successfully completed.</MetricLabel>
                         </CardContent>
                     </Card>
                 </MetricsGrid>
@@ -241,55 +302,81 @@ const Dashboard = () => {
                     </Card>
                 </InsightsGrid>
 
-                {/* Section 3: History Table */}
+                {/* Section 3: Most Recent Session */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Simulation History</CardTitle>
+                        <CardTitle>Recent Session {recentSession && <Badge variant="outline" style={{ marginLeft: "10px", fontSize: "0.75rem" }}>{new Date(recentSession.endTime).toLocaleDateString()}</Badge>}</CardTitle>
                     </CardHeader>
                     <CardContent style={{ padding: 0 }}>
-                        <div style={{ overflowX: "auto" }}>
-                            <Table>
-                                <thead>
-                                    <tr>
-                                        <th>Scenario</th>
-                                        <th>Attack Type</th>
-                                        <th>User Action</th>
-                                        <th>Date</th>
-                                        <th>Outcome</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td style={{ fontWeight: 500 }}>Urgent Payroll Update</td>
-                                        <td>Urgency</td>
-                                        <td>Clicked Link</td>
-                                        <td>Oct 24, 2025</td>
-                                        <td><Badge variant="destructive">Failed</Badge></td>
-                                    </tr>
-                                    <tr>
-                                        <td style={{ fontWeight: 500 }}>CEO Gift Card Request</td>
-                                        <td>Authority</td>
-                                        <td>Reported Phishing</td>
-                                        <td>Oct 20, 2025</td>
-                                        <td><Badge variant="success">Safe</Badge></td>
-                                    </tr>
-                                    <tr>
-                                        <td style={{ fontWeight: 500 }}>IT Password Reset</td>
-                                        <td>Technical</td>
-                                        <td>Entered Creds</td>
-                                        <td>Oct 15, 2025</td>
-                                        <td><Badge variant="destructive">Failed</Badge></td>
-                                    </tr>
-                                    <tr>
-                                        <td style={{ fontWeight: 500 }}>Free Conference Ticket</td>
-                                        <td>Reward</td>
-                                        <td>Ignored</td>
-                                        <td>Oct 10, 2025</td>
-                                        <td><Badge variant="success">Safe</Badge></td>
-                                    </tr>
-                                </tbody>
-                            </Table>
-                        </div>
+                        {recentSession ? (
+                            <div style={{ overflowX: "auto" }}>
+                                <Table>
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Interaction Type</th>
+                                            <th>Risk Level</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {recentSession.interactions.map((interaction, index) => {
+                                            let badgeVariant = "secondary";
+                                            if (interaction.type.includes("ENTERED") || interaction.type.includes("FAKE_LINK")) badgeVariant = "destructive";
+                                            else if (interaction.type.includes("REPORT")) badgeVariant = "success";
+
+                                            // Handle edge case of EMAIL_OPENED which isn't defined explicitly here
+                                            else if (interaction.type.includes("OPENED")) badgeVariant = "outline";
+
+                                            return (
+                                                <tr key={index}>
+                                                    <td>{new Date(interaction.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</td>
+                                                    <td style={{ fontWeight: 500 }}>{interaction.type}</td>
+                                                    <td><Badge variant={badgeVariant}>{badgeVariant === "destructive" ? "Failed" : badgeVariant === "success" ? "Safe" : "Action"}</Badge></td>
+                                                </tr>
+                                            );
+                                        })}
+                                        {recentSession.interactions.length === 0 && (
+                                            <tr>
+                                                <td colSpan="3" style={{ textAlign: "center", padding: "2rem", color: "hsl(var(--muted-foreground))" }}>
+                                                    No interactions recorded for this session.
+                                                </td>
+                                            </tr>
+                                        )}
+                                        <tr style={{ backgroundColor: "hsl(var(--secondary) / 0.5)" }}>
+                                            <td colSpan="2" style={{ fontWeight: 600, textAlign: "right" }}>Overall Session Grade:</td>
+                                            <td>
+                                                <Badge
+                                                    variant={recentSession.finalRiskLevel === 'LOW' ? 'success' : recentSession.finalRiskLevel === 'MEDIUM' ? 'warning' : 'destructive'}
+                                                >
+                                                    {recentSession.finalRiskLevel} RISK
+                                                </Badge>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </Table>
+                                {recentSession.explanation && (
+                                    <div style={{ padding: "1.5rem", borderTop: "1px solid hsl(var(--border))", backgroundColor: "hsl(var(--muted)/0.2)" }}>
+                                        <h4 style={{ fontSize: "0.875rem", fontWeight: 600, marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                            <Brain size={16} color="hsl(var(--primary))" />
+                                            AI Analysis
+                                        </h4>
+                                        <p style={{ fontSize: "0.925rem", color: "hsl(var(--muted-foreground))", lineHeight: 1.5 }}>
+                                            {recentSession.explanation}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div style={{ padding: "3rem", textAlign: "center", color: "hsl(var(--muted-foreground))" }}>
+                                <p>No simulation sessions recorded yet.</p>
+                                <Button
+                                    onClick={() => navigate("/simulation")}
+                                    style={{ marginTop: "1rem" }}
+                                >
+                                    Start First Simulation
+                                </Button>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 
