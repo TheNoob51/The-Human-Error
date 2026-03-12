@@ -271,12 +271,17 @@ export const SimulationProvider = ({ children }) => {
         }
 
         setInbox(currentInbox => {
+            // Mark the resolved email in inbox state
+            const updated = resolvedId
+                ? currentInbox.map(e => e.id === resolvedId ? { ...e, resolved: true } : e)
+                : currentInbox;
+
             // Find first unresolved email
-            const next = currentInbox.find(e => !resolvedIds.current.has(e.id));
+            const next = updated.find(e => !resolvedIds.current.has(e.id));
             if (next) {
                 setSelectedEmailId(next.id);
             }
-            return currentInbox;
+            return updated;
         });
 
         // Trigger refill check

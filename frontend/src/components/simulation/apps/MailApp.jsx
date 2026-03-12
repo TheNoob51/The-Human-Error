@@ -23,12 +23,13 @@ const Sidebar = styled.div`
 
 const MailItem = styled.div`
   padding: 10px;
-  background: ${props => props.$active ? '#fff' : 'transparent'};
+  background: ${props => props.$resolved ? '#e8e8e8' : props.$active ? '#fff' : 'transparent'};
   border-left: 3px solid ${props => props.$active ? '#0078d7' : 'transparent'};
   cursor: pointer;
+  opacity: ${props => props.$resolved ? 0.6 : 1};
   
   &:hover {
-    background: #e6f7ff;
+    background: ${props => props.$resolved ? '#e0e0e0' : '#e6f7ff'};
   }
 `;
 
@@ -157,6 +158,10 @@ const MailApp = () => {
 
   const handleVerifyClick = () => {
     if (!scenario.linkUrl) return;
+    if (scenario.resolved) {
+      alert("You have already taken action on this email.");
+      return;
+    }
     logInteraction(PHISHING_INTERACTIONS.FAKE_LINK_CLICKED, { link: scenario.linkUrl, emailId: scenario.id });
     openWindow('browser');
     // Don't call loadNextEmail here — BrowserApp handles it after credential submission
@@ -169,6 +174,10 @@ const MailApp = () => {
   };
 
   const handleReportPhishing = () => {
+    if (scenario.resolved) {
+      alert("You have already taken action on this email.");
+      return;
+    }
     logInteraction(PHISHING_INTERACTIONS.REPORT_PHISHING, { emailId: scenario.id });
     alert("Phishing reported!");
     loadNextEmail(scenario.id);
@@ -181,11 +190,12 @@ const MailApp = () => {
           <MailItem
             key={email.id}
             $active={selectedEmailId === email.id}
-            onClick={() => markAsRead(email.id)} // This selects it via context update
+            $resolved={email.resolved}
+            onClick={() => markAsRead(email.id)}
           >
             <Sender>{email.senderName}</Sender>
             <Subject style={{ fontWeight: email.isRead ? 'normal' : 'bold' }}>
-              {email.subject}
+              {email.subject}{email.resolved ? ' ✓' : ''}
             </Subject>
           </MailItem>
         ))}
