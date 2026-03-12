@@ -94,13 +94,13 @@ const Header = ({ user }) => {
         <NavActions>
           {displayUser ? (
             <>
-              <Button size="sm" onClick={() => navigate("/simulation")}>
-                Start Simulation
+              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+                Dashboard
               </Button>
               <UserProfile>
                 <Avatar fallback={displayUser.email ? displayUser.email[0].toUpperCase() : "U"} />
                 <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>
-                  {displayUser.email ? displayUser.email.split('@')[0] : "User"}
+                  {displayUser.displayName || (displayUser.email ? displayUser.email.split('@')[0] : "User")}
                 </span>
               </UserProfile>
               <Button variant="ghost" size="sm" onClick={handleLogout}>
@@ -108,14 +108,9 @@ const Header = ({ user }) => {
               </Button>
             </>
           ) : (
-            <>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
-                Dashboard
-              </Button>
-              <Button size="sm" onClick={() => navigate("/auth")}>
-                Login / Signup
-              </Button>
-            </>
+            <Button size="sm" onClick={() => navigate("/auth")}>
+              Login
+            </Button>
           )}
         </NavActions>
       </HeaderContent>

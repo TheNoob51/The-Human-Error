@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import { AlertOctagon, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWindowManager } from '../WindowManager';
+import { useSimulation } from '../../../context/SimulationContext';
+import { PHISHING_INTERACTIONS } from '../../../constants';
 
 const Overlay = styled(motion.div)`
   position: absolute;
@@ -76,6 +78,17 @@ const Button = styled.button`
 
 const SystemAlert = () => {
   const { closeWindow } = useWindowManager();
+  const { logInteraction } = useSimulation();
+
+  const handleResolveNow = () => {
+    logInteraction(PHISHING_INTERACTIONS.FAKE_LINK_CLICKED, { source: 'system_alert', action: 'resolve_now' });
+    closeWindow('alert');
+  };
+
+  const handleIgnore = () => {
+    logInteraction(PHISHING_INTERACTIONS.REPORT_PHISHING, { source: 'system_alert', action: 'ignored_threat' });
+    closeWindow('alert');
+  };
 
   return (
     <AlertBox
@@ -94,8 +107,8 @@ const SystemAlert = () => {
           Malicious activity was detected on your workstation. Immediate action is required to prevent data loss.
         </Message>
         <ButtonGroup>
-          <Button $primary onClick={() => closeWindow('alert')}>Resolve Now</Button>
-          <Button onClick={() => closeWindow('alert')}>Ignore</Button>
+          <Button $primary onClick={handleResolveNow}>Resolve Now</Button>
+          <Button onClick={handleIgnore}>Ignore</Button>
         </ButtonGroup>
       </AlertBody>
     </AlertBox>

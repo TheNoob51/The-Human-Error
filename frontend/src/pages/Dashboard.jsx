@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -9,7 +9,8 @@ import {
     AlertTriangle,
     CheckCircle,
     XCircle,
-    Bell
+    Bell,
+    Clock
 } from "lucide-react";
 
 import Header from "../components/Header";
@@ -18,6 +19,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "../components/Card";
 import Badge from "../components/Badge";
 import Progress from "../components/Progress";
 import Avatar from "../components/Avatar";
+import { useAuth } from "../context/AuthContext";
+import { getUserSimulations } from "../lib/firestoreService";
 
 /* Navbar related styles removed in favor of reusable Header */
 
@@ -128,54 +131,137 @@ const Table = styled.table`
 
 const Dashboard = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [results, setResults] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [metrics, setMetrics] = useState({
         totalSimulations: 0,
         highRiskCount: 0,
         lowRiskCount: 0,
         averageRiskScore: 0,
     });
+    const [riskBreakdown, setRiskBreakdown] = useState({
+        urgency: { count: 0, level: 'Low Risk', variant: 'success' },
+        authority: { count: 0, level: 'Low Risk', variant: 'success' },
+        reward: { count: 0, level: 'Low Risk', variant: 'success' },
+    });
+    const [avgHesitation, setAvgHesitation] = useState(null);
 
-    useState(() => {
-        try {
-            const stored = JSON.parse(localStorage.getItem('simulation_results') || '[]');
+    // NOTE: previously was useState(() => {...}, []) which is a bug — should be useEffect
+    useEffect(() => {
+        const loadResults = async () => {
+            setLoading(true);
+            let stored = [];
+
+            // Try Firestore first
+            try {
+                if (user?.uid) {
+                    const firestoreResults = await getUserSimulations(user.uid);
+                    if (firestoreResults.length > 0) {
+                        stored = firestoreResults;
+                    }
+                }
+            } catch (err) {
+                console.warn('Firestore fetch failed, falling back to localStorage:', err);
+            }
+
+            // Fallback to localStorage
+            if (stored.length === 0) {
+                try {
+                    stored = JSON.parse(localStorage.getItem('simulation_results') || '[]');
+                } catch (e) {
+                    console.error('localStorage parse error:', e);
+                }
+            }
+
             setResults(stored);
 
             if (stored.length > 0) {
                 let high = 0;
                 let low = 0;
                 let totalScore = 0;
+                let urgencyRisky = 0;
+                let authorityRisky = 0;
+                let rewardRisky = 0;
+                let totalHesitation = 0;
+                let hesitationCount = 0;
 
                 const riskMap = {
                     'VERY_HIGH': 0,
                     'HIGH': 1,
                     'MEDIUM': 2,
-                    'LOW': 3
+                    'LOW': 3,
                 };
 
                 stored.forEach(session => {
                     const risk = session.finalRiskLevel || 'LOW';
                     if (risk === 'VERY_HIGH' || risk === 'HIGH') high++;
                     if (risk === 'MEDIUM' || risk === 'LOW') low++;
-                    totalScore += riskMap[risk];
+                    totalScore += (riskMap[risk] ?? 3);
+
+                    // Track average hesitation
+                    if (session.avgHesitationMs) {
+                        totalHesitation += session.avgHesitationMs;
+                        hesitationCount++;
+                    }
+
+                    // Analyze interactions for dynamic risk breakdown
+                    const interactions = session.interactions || [];
+                    interactions.forEach(interaction => {
+                        const isFailed = interaction.type === 'CREDENTIALS_ENTERED' || interaction.type === 'FAKE_LINK_CLICKED';
+                        const details = interaction.details || {};
+
+                        // Classify by email clues if available
+                        const emailData = (session.inbox || []).find(e => e.id === details.emailId);
+                        const clues = emailData?.clues?.join(' ').toLowerCase() || '';
+
+                        if (isFailed) {
+                            if (clues.includes('urgent') || clues.includes('expir') || clues.includes('timeline')) {
+                                urgencyRisky++;
+                            }
+                            if (clues.includes('ceo') || clues.includes('authority') || clues.includes('leadership') || clues.includes('executive')) {
+                                authorityRisky++;
+                            }
+                            if (clues.includes('reward') || clues.includes('bonus') || clues.includes('benefit')) {
+                                rewardRisky++;
+                            }
+                        }
+                    });
                 });
 
-                // Calculate average (0 to 3 scale)
                 const avg = totalScore / stored.length;
-                // Convert to percentage (0 to 100) where 3 is 100% and 0 is 0%
                 const avgPercentage = Math.round((avg / 3) * 100);
 
                 setMetrics({
                     totalSimulations: stored.length,
                     highRiskCount: high,
                     lowRiskCount: low,
-                    averageRiskScore: avgPercentage
+                    averageRiskScore: avgPercentage,
                 });
+
+                // Dynamic risk breakdown
+                const getRiskLevel = (count) => {
+                    if (count >= 3) return { level: 'High Risk', variant: 'destructive' };
+                    if (count >= 1) return { level: 'Medium Risk', variant: 'warning' };
+                    return { level: 'Low Risk', variant: 'success' };
+                };
+
+                setRiskBreakdown({
+                    urgency: { count: urgencyRisky, ...getRiskLevel(urgencyRisky) },
+                    authority: { count: authorityRisky, ...getRiskLevel(authorityRisky) },
+                    reward: { count: rewardRisky, ...getRiskLevel(rewardRisky) },
+                });
+
+                if (hesitationCount > 0) {
+                    setAvgHesitation(Math.round(totalHesitation / hesitationCount / 1000)); // in seconds
+                }
             }
-        } catch (error) {
-            console.error("Failed to load simulation results:", error);
-        }
-    }, []);
+
+            setLoading(false);
+        };
+
+        loadResults();
+    }, [user]);
 
     const recentSession = results[0] || null;
 
@@ -187,9 +273,14 @@ const Dashboard = () => {
             <MainContent as={motion.div} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
 
                 {/* Page Header */}
-                <div>
-                    <h1 style={{ fontSize: "2rem", fontWeight: 800, marginBottom: "0.25rem" }}>Security Dashboard</h1>
-                    <p style={{ color: "hsl(var(--muted-foreground))" }}>Behavioral insights based on simulated social engineering scenarios.</p>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div>
+                        <h1 style={{ fontSize: "2rem", fontWeight: 800, marginBottom: "0.25rem" }}>Security Dashboard</h1>
+                        <p style={{ color: "hsl(var(--muted-foreground))" }}>Behavioral insights based on simulated social engineering scenarios.</p>
+                    </div>
+                    <Button onClick={() => navigate("/simulation")}>
+                        Start Simulation
+                    </Button>
                 </div>
 
                 {/* Section 1: Key Metrics */}
@@ -263,22 +354,33 @@ const Dashboard = () => {
                                         <AlertTriangle size={18} className="text-destructive" />
                                         <span style={{ fontWeight: 500 }}>Urgency-based attacks</span>
                                     </div>
-                                    <Badge variant="destructive">High Risk</Badge>
+                                    <Badge variant={riskBreakdown.urgency.variant}>{riskBreakdown.urgency.level}</Badge>
                                 </RiskItem>
                                 <RiskItem>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                         <ShieldAlert size={18} className="text-warning" style={{ color: "hsl(38, 92%, 50%)" }} />
                                         <span style={{ fontWeight: 500 }}>Authority-based attacks</span>
                                     </div>
-                                    <Badge variant="warning">Medium Risk</Badge>
+                                    <Badge variant={riskBreakdown.authority.variant}>{riskBreakdown.authority.level}</Badge>
                                 </RiskItem>
                                 <RiskItem>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                         <MousePointerClick size={18} className="text-primary" />
                                         <span style={{ fontWeight: 500 }}>Reward-based attacks</span>
                                     </div>
-                                    <Badge variant="success">Low Risk</Badge>
+                                    <Badge variant={riskBreakdown.reward.variant}>{riskBreakdown.reward.level}</Badge>
                                 </RiskItem>
+                                {avgHesitation !== null && (
+                                    <RiskItem>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <Clock size={18} />
+                                            <span style={{ fontWeight: 500 }}>Avg. Decision Time</span>
+                                        </div>
+                                        <Badge variant={avgHesitation < 5 ? 'destructive' : avgHesitation < 15 ? 'warning' : 'success'}>
+                                            {avgHesitation}s
+                                        </Badge>
+                                    </RiskItem>
+                                )}
                             </RiskList>
                         </CardContent>
                     </Card>

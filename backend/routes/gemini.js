@@ -16,7 +16,7 @@ router.post('/generate-phishing', async (req, res) => {
             });
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         const prompt = `
         Generate a realistic phishing email simulation scenario in valid JSON format.
@@ -94,7 +94,7 @@ router.get('/generate-emails', async (req, res) => {
             return res.json(fallbackEmails);
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         const prompt = `
         Generate an array of 3 distinct, realistic phishing email simulation scenarios in valid JSON format.
@@ -143,9 +143,13 @@ router.get('/generate-emails', async (req, res) => {
 });
 
 router.post('/generate-explanation', async (req, res) => {
-    const { interactions, finalRiskLevel } = req.body;
+    const { interactions, finalRiskLevel, avgHesitationMs } = req.body;
 
-    const fallbackExplanation = `The user completed the simulation with a final risk level of ${finalRiskLevel}. This is based on their recorded actions during the scenarios. A ${finalRiskLevel} risk typically indicates ${finalRiskLevel === 'LOW' ? 'good security awareness' : 'areas that need significant improvement in identifying threats'}.`;
+    const hesitationNote = avgHesitationMs
+        ? `The user's average decision time was ${Math.round(avgHesitationMs / 1000)} seconds per action.`
+        : '';
+
+    const fallbackExplanation = `The user completed the simulation with a final risk level of ${finalRiskLevel}. This is based on their recorded actions during the scenarios. A ${finalRiskLevel} risk typically indicates ${finalRiskLevel === 'LOW' ? 'good security awareness' : 'areas that need significant improvement in identifying threats'}. ${hesitationNote}`;
 
     try {
         if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy_key') {
@@ -153,7 +157,7 @@ router.post('/generate-explanation', async (req, res) => {
             return res.json({ explanation: fallbackExplanation });
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         const prompt = `
         You are an expert cybersecurity analyst evaluating a user's performance in a phishing simulation.
@@ -161,8 +165,9 @@ router.post('/generate-explanation', async (req, res) => {
         Session Data:
         - Interactions: ${JSON.stringify(interactions)}
         - Final Assigned Risk Level: ${finalRiskLevel}
+        - Average Decision/Hesitation Time: ${avgHesitationMs ? Math.round(avgHesitationMs / 1000) + ' seconds' : 'Not recorded'}
         
-        Write a concise, 3-5 sentence explanation of why the user received this specific risk level based strictly on the actions they took in the interactions array. Address the user directly (e.g., "You clicked a link..."). Keep the tone professional but instructive.
+        Write a concise, 3-5 sentence explanation of why the user received this specific risk level based strictly on the actions they took in the interactions array. If hesitation time data is available, comment on whether they acted too quickly (impulsive, under 5 seconds) or took appropriate time to evaluate. Address the user directly (e.g., "You clicked a link..."). Keep the tone professional but instructive.
         `;
 
         const result = await model.generateContent(prompt);

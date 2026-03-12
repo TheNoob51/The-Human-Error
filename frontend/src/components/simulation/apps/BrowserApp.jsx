@@ -104,18 +104,16 @@ const SubmitButton = styled.button`
 `;
 
 const BrowserApp = () => {
-  const { logInteraction, nextScenario } = useSimulation(); // removed endSimulation
+  const { logInteraction, loadNextEmail } = useSimulation();
   const [url, setUrl] = React.useState('http://verify-account.security-check.com/login');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
 
   const handleLogin = (e) => {
     e.preventDefault();
-    logInteraction(PHISHING_INTERACTIONS.CREDENTIALS_ENTERED);
+    logInteraction(PHISHING_INTERACTIONS.CREDENTIALS_ENTERED, { email });
     alert("Credentials captured! (Simulation continues)");
-    // In a continuous loop, maybe we close the browser and load next scenario?
-    // Or just let them continue? Let's load next scenario to reset state for next round.
-    nextScenario();
+    loadNextEmail();
   };
 
   return (
@@ -138,9 +136,9 @@ const BrowserApp = () => {
         <LoginForm>
           <Logo>Company Corp</Logo>
           <div style={{ textAlign: 'left', fontSize: '14px', marginBottom: '5px' }}>Email</div>
-          <Input type="text" placeholder="user@company.com" />
+          <Input type="text" placeholder="user@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
           <div style={{ textAlign: 'left', fontSize: '14px', marginBottom: '5px' }}>Password</div>
-          <Input type="password" placeholder="********" />
+          <Input type="password" placeholder="********" value={password} onChange={(e) => setPassword(e.target.value)} />
           <SubmitButton onClick={handleLogin}>Sign In</SubmitButton>
           <div style={{ marginTop: '15px', fontSize: '12px', color: '#1a73e8', cursor: 'pointer' }}>Forgot password?</div>
         </LoginForm>

@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../lib/firebase";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GithubAuthProvider } from "firebase/auth";
+import { auth, googleProvider } from "../lib/firebase";
+import { createUserProfile } from "../lib/firestoreService";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "../components/Card";
 import Button from "../components/Button";
 import Input from "../components/Input";
@@ -152,17 +153,50 @@ const Auth = ({ initialMode = "login" }) => {
     setError("");
 
     try {
+      let userCredential;
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
-        navigate("/dashboard");
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
-        navigate("/dashboard");
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
       }
+      // Create/update user profile in Firestore (non-blocking)
+      createUserProfile(userCredential.user).catch(err =>
+        console.warn('Firestore profile creation skipped:', err.message)
+      );
+      navigate("/dashboard");
     } catch (err) {
       console.error(err);
       // Suppress weak password alert
       if (err.message.includes("weak-password")) return;
+      setError(err.message.replace("Firebase: ", ""));
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError("");
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      createUserProfile(result.user).catch(err =>
+        console.warn('Firestore profile creation skipped:', err.message)
+      );
+      navigate("/dashboard");
+    } catch (err) {
+      console.error(err);
+      setError(err.message.replace("Firebase: ", ""));
+    }
+  };
+
+  const handleGithubLogin = async () => {
+    setError("");
+    try {
+      const githubProvider = new GithubAuthProvider();
+      const result = await signInWithPopup(auth, githubProvider);
+      createUserProfile(result.user).catch(err =>
+        console.warn('Firestore profile creation skipped:', err.message)
+      );
+      navigate("/dashboard");
+    } catch (err) {
+      console.error(err);
       setError(err.message.replace("Firebase: ", ""));
     }
   };
@@ -241,11 +275,11 @@ const Auth = ({ initialMode = "login" }) => {
             </Divider>
 
             <SocialButtons>
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleGithubLogin}>
                 <SimpleIcon icon={siGithub} style={{ marginRight: "0.5rem" }} />
                 Github
               </Button>
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleGoogleLogin}>
                 <SimpleIcon icon={siGoogle} style={{ marginRight: "0.5rem" }} />
                 Google
               </Button>

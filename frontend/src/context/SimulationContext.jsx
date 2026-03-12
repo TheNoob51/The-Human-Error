@@ -1,13 +1,17 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { PHISHING_INTERACTIONS } from '../constants';
+import { useAuth } from './AuthContext';
+import { saveSimulationResult } from '../lib/firestoreService';
 
 const SimulationContext = createContext();
 
 export const SimulationProvider = ({ children }) => {
+    const { user } = useAuth();
     const [simulationState, setSimulationState] = useState('IDLE'); // IDLE, RUNNING, COMPLETED
     const [inbox, setInbox] = useState([]);
     const [selectedEmailId, setSelectedEmailId] = useState(null);
     const [session, setSession] = useState(null);
+    const [emailOpenTimestamps, setEmailOpenTimestamps] = useState({}); // Track when each email was opened
 
     const generateId = () => '_' + Math.random().toString(36).substr(2, 9);
 
@@ -39,7 +43,7 @@ export const SimulationProvider = ({ children }) => {
         {
             id: generateId(),
             senderName: "CEO Office",
-            senderEmail: "ceo@company.com", // Spoofed legitimate address
+            senderEmail: "ceo@company.com",
             subject: "Confidential: Q3 Bonus Requirements",
             body: "<p>I am attaching the mandatory requirements to qualify for the Q3 discretionary bonus.</p><p>This is highly confidential. Please review the document here immediately.</p>",
             linkText: "View Bonus Details",
@@ -50,12 +54,42 @@ export const SimulationProvider = ({ children }) => {
         }
     ];
 
-    const startSimulation = useCallback(() => {
-        setSimulationState('RUNNING');
+    /**
+     * Fetch emails from backend API, fall back to hardcoded queue on failure
+     */
+    const fetchEmailsFromBackend = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/api/generate-emails');
+            if (response.ok) {
+                const emails = await response.json();
+                if (Array.isArray(emails) && emails.length > 0) {
+                    // Add client-side fields
+                    return emails.map(email => ({
+                        ...email,
+                        id: email.id || generateId(),
+                        timestamp: new Date().toISOString(),
+                        isRead: false,
+                    }));
+                }
+            }
+        } catch (err) {
+            console.warn('Backend unavailable, using local mock emails:', err.message);
+        }
+        return null; // Signals to use fallback
+    };
 
-        // Push the first email from the queue into the inbox
-        const initialInbox = [mockEmailQueue[0]];
-        const remainingQueue = mockEmailQueue.slice(1);
+    const startSimulation = useCallback(async () => {
+        setSimulationState('RUNNING');
+        setEmailOpenTimestamps({}); // Reset hesitation tracking
+
+        // Try fetching from backend, fall back to mock queue
+        let emailQueue = await fetchEmailsFromBackend();
+        if (!emailQueue) {
+            emailQueue = [...mockEmailQueue];
+        }
+
+        const initialInbox = [emailQueue[0]];
+        const remainingQueue = emailQueue.slice(1);
 
         setInbox(initialInbox);
         setSelectedEmailId(initialInbox[0].id);
@@ -64,11 +98,12 @@ export const SimulationProvider = ({ children }) => {
             sessionId: generateId(),
             startTime: new Date().toISOString(),
             interactions: [],
-            emailsGenerated: 1, // 1 in inbox
-            emailQueue: remainingQueue
+            emailsGenerated: 1,
+            emailQueue: remainingQueue,
+            hesitationData: [], // Track hesitation times per action
         });
 
-        console.log('Simulation started with sequential queue');
+        console.log('Simulation started — emails fetched from', emailQueue === mockEmailQueue ? 'mock' : 'backend');
     }, []);
 
     const loadNextEmail = useCallback(() => {
@@ -99,13 +134,34 @@ export const SimulationProvider = ({ children }) => {
             email.id === id ? { ...email, isRead: true } : email
         ));
         setSelectedEmailId(id);
+        // Record when this email was opened for hesitation tracking
+        setEmailOpenTimestamps(prev => {
+            if (!prev[id]) {
+                return { ...prev, [id]: Date.now() };
+            }
+            return prev;
+        });
     }, []);
 
     const logInteraction = useCallback((type, details = {}) => {
+        // Calculate hesitation time if an email is currently selected
+        let hesitationMs = null;
+        const currentEmailId = details.emailId;
+        if (currentEmailId) {
+            setEmailOpenTimestamps(prev => {
+                const openTime = prev[currentEmailId];
+                if (openTime) {
+                    hesitationMs = Date.now() - openTime;
+                }
+                return prev;
+            });
+        }
+
         const interaction = {
             timestamp: new Date().toISOString(),
             type,
             details,
+            hesitationMs, // Time between opening email and taking action
         };
         setSession((prev) => {
             if (!prev) return prev;
@@ -149,13 +205,26 @@ export const SimulationProvider = ({ children }) => {
         setSimulationState('COMPLETED');
 
         const finalRiskLevel = calculateRisk(session.interactions);
+
+        // Calculate average hesitation time
+        const hesitationTimes = session.interactions
+            .filter(i => i.hesitationMs != null)
+            .map(i => i.hesitationMs);
+        const avgHesitationMs = hesitationTimes.length > 0
+            ? Math.round(hesitationTimes.reduce((a, b) => a + b, 0) / hesitationTimes.length)
+            : null;
+
         let explanation = "Simulation finished. Analysis could not be generated.";
 
         try {
             const response = await fetch('http://localhost:5000/api/generate-explanation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ interactions: session.interactions, finalRiskLevel })
+                body: JSON.stringify({
+                    interactions: session.interactions,
+                    finalRiskLevel,
+                    avgHesitationMs,
+                })
             });
             if (response.ok) {
                 const data = await response.json();
@@ -170,22 +239,33 @@ export const SimulationProvider = ({ children }) => {
             endTime: new Date().toISOString(),
             finalRiskLevel,
             explanation,
-            inbox // Save inbox state if needed for review
+            avgHesitationMs,
+            inbox // Save inbox state for review
         };
 
         setSession(finalSession);
 
-        // Save to localStorage
+        // Save to Firestore (primary) + localStorage (backup)
+        try {
+            if (user?.uid) {
+                await saveSimulationResult(user.uid, finalSession);
+                console.log('Result saved to Firestore');
+            }
+        } catch (err) {
+            console.error('Failed to save to Firestore:', err);
+        }
+
+        // Also save to localStorage as fallback
         try {
             const existingResults = JSON.parse(localStorage.getItem('simulation_results') || '[]');
-            const newResults = [finalSession, ...existingResults]; // Append new results (latest first)
+            const newResults = [finalSession, ...existingResults];
             localStorage.setItem('simulation_results', JSON.stringify(newResults));
             console.log('Result saved to localStorage');
         } catch (error) {
             console.error('Failed to save simulation result:', error);
         }
 
-    }, [session, inbox]);
+    }, [session, inbox, user]);
 
     const value = {
         simulationState,
