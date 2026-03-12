@@ -159,7 +159,7 @@ const MailApp = () => {
     if (!scenario.linkUrl) return;
     logInteraction(PHISHING_INTERACTIONS.FAKE_LINK_CLICKED, { link: scenario.linkUrl, emailId: scenario.id });
     openWindow('browser');
-    loadNextEmail();
+    // Don't call loadNextEmail here — BrowserApp handles it after credential submission
   };
 
   const handleInspectSender = () => {

@@ -12,12 +12,13 @@ export const SimulationProvider = ({ children }) => {
     const [selectedEmailId, setSelectedEmailId] = useState(null);
     const [session, setSession] = useState(null);
     const [emailOpenTimestamps, setEmailOpenTimestamps] = useState({}); // Track when each email was opened
+    const [resolvedEmailIds, setResolvedEmailIds] = useState(new Set()); // Prevent double-loading
 
     const generateId = () => '_' + Math.random().toString(36).substr(2, 9);
 
-    const mockEmailQueue = [
+    // Pool of diverse mock emails — a random subset is picked each simulation
+    const allMockEmails = [
         {
-            id: generateId(),
             senderName: "HR Department",
             senderEmail: "hr@company-benefits-update.com",
             subject: "Action Required: Update Your Benefits",
@@ -25,11 +26,8 @@ export const SimulationProvider = ({ children }) => {
             linkText: "Update Benefits Now",
             linkUrl: "update-benefits",
             clues: ["Suspicious sender domain", "Urgent consequence"],
-            timestamp: new Date().toISOString(),
-            isRead: false
         },
         {
-            id: generateId(),
             senderName: "IT Service Desk",
             senderEmail: "admin@it-support-portal.net",
             subject: "Password Expiry Notice",
@@ -37,11 +35,8 @@ export const SimulationProvider = ({ children }) => {
             linkText: "Keep Current Password",
             linkUrl: "reset-password",
             clues: ["Urgent timeline", "Suspicious sender domain"],
-            timestamp: new Date().toISOString(),
-            isRead: false
         },
         {
-            id: generateId(),
             senderName: "CEO Office",
             senderEmail: "ceo@company.com",
             subject: "Confidential: Q3 Bonus Requirements",
@@ -49,13 +44,51 @@ export const SimulationProvider = ({ children }) => {
             linkText: "View Bonus Details",
             linkUrl: "view-document",
             clues: ["Unexpected request from leadership", "High pressure/reward"],
-            timestamp: new Date().toISOString(),
-            isRead: false
-        }
+        },
+        {
+            senderName: "Microsoft 365 Team",
+            senderEmail: "noreply@microsoft365-security.com",
+            subject: "Unusual Sign-in Activity Detected",
+            body: "<p>We detected a sign-in to your account from an unfamiliar location.</p><p>If this wasn't you, please secure your account immediately by verifying your identity.</p>",
+            linkText: "Review Activity",
+            linkUrl: "review-activity",
+            clues: ["Suspicious sender domain", "Fear-based urgency"],
+        },
+        {
+            senderName: "Accounts Payable",
+            senderEmail: "accounts@vendor-payments-portal.org",
+            subject: "Invoice #4892 — Payment Overdue",
+            body: "<p>Dear Finance Team,</p><p>Invoice #4892 is overdue. Please review and authorize the payment to avoid late fees and service disruption.</p>",
+            linkText: "View Invoice",
+            linkUrl: "view-invoice",
+            clues: ["External domain", "Financial pressure", "Generic greeting"],
+        },
+        {
+            senderName: "Google Workspace",
+            senderEmail: "workspace-admin@google-workspace-alerts.net",
+            subject: "Your storage is 98% full",
+            body: "<p>Your Google Workspace storage is almost full. Files will stop syncing soon.</p><p>Upgrade now or clean up your drive to free space.</p>",
+            linkText: "Manage Storage",
+            linkUrl: "manage-storage",
+            clues: ["Fake Google domain", "Urgency tactic", "No personalization"],
+        },
     ];
 
     /**
-     * Fetch emails from backend API, fall back to hardcoded queue on failure
+     * Pick N random unique emails from the pool, each with a fresh ID
+     */
+    const pickRandomEmails = (pool, count) => {
+        const shuffled = [...pool].sort(() => Math.random() - 0.5);
+        return shuffled.slice(0, count).map(email => ({
+            ...email,
+            id: generateId(),
+            timestamp: new Date().toISOString(),
+            isRead: false,
+        }));
+    };
+
+    /**
+     * Fetch emails from backend API, fall back to random mock selection
      */
     const fetchEmailsFromBackend = async () => {
         try {
@@ -63,7 +96,6 @@ export const SimulationProvider = ({ children }) => {
             if (response.ok) {
                 const emails = await response.json();
                 if (Array.isArray(emails) && emails.length > 0) {
-                    // Add client-side fields
                     return emails.map(email => ({
                         ...email,
                         id: email.id || generateId(),
@@ -75,17 +107,18 @@ export const SimulationProvider = ({ children }) => {
         } catch (err) {
             console.warn('Backend unavailable, using local mock emails:', err.message);
         }
-        return null; // Signals to use fallback
+        return null;
     };
 
     const startSimulation = useCallback(async () => {
         setSimulationState('RUNNING');
-        setEmailOpenTimestamps({}); // Reset hesitation tracking
+        setEmailOpenTimestamps({});
+        setResolvedEmailIds(new Set());
 
-        // Try fetching from backend, fall back to mock queue
+        // Try fetching from backend, fall back to randomized mock pool
         let emailQueue = await fetchEmailsFromBackend();
         if (!emailQueue) {
-            emailQueue = [...mockEmailQueue];
+            emailQueue = pickRandomEmails(allMockEmails, 3);
         }
 
         const initialInbox = [emailQueue[0]];
@@ -100,26 +133,36 @@ export const SimulationProvider = ({ children }) => {
             interactions: [],
             emailsGenerated: 1,
             emailQueue: remainingQueue,
-            hesitationData: [], // Track hesitation times per action
+            hesitationData: [],
         });
 
-        console.log('Simulation started — emails fetched from', emailQueue === mockEmailQueue ? 'mock' : 'backend');
+        console.log('Simulation started');
     }, []);
 
     const loadNextEmail = useCallback(() => {
         setSession(prevSession => {
             if (!prevSession || prevSession.emailQueue.length === 0) {
                 console.log("No more emails in queue.");
-                return prevSession; // Queue empty
+                return prevSession;
             }
 
             const nextEmail = prevSession.emailQueue[0];
             const updatedQueue = prevSession.emailQueue.slice(1);
 
-            // Update inbox
-            setInbox(prevInbox => [nextEmail, ...prevInbox]);
-            // (Optional) Select the new email automatically:
-            setSelectedEmailId(nextEmail.id);
+            // Prevent duplicate — check if this email was already added
+            setResolvedEmailIds(prev => {
+                if (prev.has(nextEmail.id)) {
+                    console.log("Email already loaded, skipping:", nextEmail.id);
+                    return prev;
+                }
+                // Add to inbox only if not already resolved
+                setInbox(prevInbox => {
+                    if (prevInbox.some(e => e.id === nextEmail.id)) return prevInbox;
+                    return [nextEmail, ...prevInbox];
+                });
+                setSelectedEmailId(nextEmail.id);
+                return new Set([...prev, nextEmail.id]);
+            });
 
             return {
                 ...prevSession,
