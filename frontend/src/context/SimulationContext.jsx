@@ -122,6 +122,7 @@ export const SimulationProvider = ({ children }) => {
 
     // ─── React state (triggers re-renders) ───
     const [simulationState, setSimulationState] = useState('IDLE');
+    const [isSaving, setIsSaving] = useState(false);
     const [inbox, setInbox] = useState([]);
     const [selectedEmailId, setSelectedEmailId] = useState(null);
     const [session, setSession] = useState(null);
@@ -350,7 +351,8 @@ export const SimulationProvider = ({ children }) => {
         const currentSession = sessionRef.current;
         const currentInbox = inboxRef.current;
         if (!currentSession) return;
-        setSimulationState('COMPLETED');
+
+        setIsSaving(true);
 
         const finalRiskLevel = calculateRisk(currentSession.interactions);
 
@@ -361,8 +363,29 @@ export const SimulationProvider = ({ children }) => {
             ? Math.round(hesitationTimes.reduce((a, b) => a + b, 0) / hesitationTimes.length)
             : null;
 
-        let explanation = "Simulation finished. Analysis could not be generated.";
+        const partialSession = {
+            ...currentSession,
+            endTime: new Date().toISOString(),
+            finalRiskLevel,
+            explanation: "Generating analysis...",
+            avgHesitationMs,
+            inbox: currentInbox,
+        };
 
+        // 1. Save to localStorage immediately so Dashboard loads instantly
+        try {
+            const existingResults = JSON.parse(localStorage.getItem('simulation_results') || '[]');
+            localStorage.setItem('simulation_results', JSON.stringify([partialSession, ...existingResults]));
+        } catch (err) {
+            console.error('localStorage save failed:', err);
+        }
+
+        // 2. Navigate immediately
+        setSession(partialSession);
+        setSimulationState('COMPLETED');
+
+        // 3. Fetch Gemini explanation + save to Firestore in background
+        let explanation = partialSession.explanation;
         try {
             const response = await fetch('http://localhost:5000/api/generate-explanation', {
                 method: 'POST',
@@ -379,19 +402,25 @@ export const SimulationProvider = ({ children }) => {
             }
         } catch (err) {
             console.error("Failed to generate explanation:", err);
+            explanation = `Simulation complete. Final risk level: ${finalRiskLevel}.`;
         }
 
-        const finalSession = {
-            ...currentSession,
-            endTime: new Date().toISOString(),
-            finalRiskLevel,
-            explanation,
-            avgHesitationMs,
-            inbox: currentInbox,
-        };
-
+        const finalSession = { ...partialSession, explanation };
         setSession(finalSession);
 
+        // 4. Update localStorage with real explanation
+        try {
+            const existingResults = JSON.parse(localStorage.getItem('simulation_results') || '[]');
+            const updated = existingResults.map(r =>
+                r.sessionId === finalSession.sessionId ? finalSession : r
+            );
+            localStorage.setItem('simulation_results', JSON.stringify(updated));
+            console.log('Result saved to localStorage');
+        } catch (error) {
+            console.error('Failed to update localStorage with explanation:', error);
+        }
+
+        // 5. Save to Firestore
         try {
             if (user?.uid) {
                 await saveSimulationResult(user.uid, finalSession);
@@ -401,19 +430,13 @@ export const SimulationProvider = ({ children }) => {
             console.error('Failed to save to Firestore:', err);
         }
 
-        try {
-            const existingResults = JSON.parse(localStorage.getItem('simulation_results') || '[]');
-            const newResults = [finalSession, ...existingResults];
-            localStorage.setItem('simulation_results', JSON.stringify(newResults));
-            console.log('Result saved to localStorage');
-        } catch (error) {
-            console.error('Failed to save simulation result:', error);
-        }
+        setIsSaving(false);
 
     }, [user]);
 
     const value = {
         simulationState,
+        isSaving,
         inbox,
         selectedEmailId,
         session,

@@ -35,7 +35,7 @@ const ContentArea = styled.div`
 
 const Desktop = () => {
     const { isShutdown, openWindow } = useWindowManager();
-    const { endSimulation } = useSimulation();
+    const { endSimulation, isSaving } = useSimulation();
 
     if (isShutdown) {
         return <ShutdownScreen />;
@@ -61,18 +61,19 @@ const Desktop = () => {
                 <div style={{ position: 'absolute', top: 20, right: 20 }}>
                     <button
                         onClick={endSimulation}
+                        disabled={isSaving}
                         style={{
-                            background: '#d93025',
+                            background: isSaving ? '#999' : '#d93025',
                             color: 'white',
                             border: 'none',
                             padding: '10px 20px',
                             borderRadius: '5px',
-                            cursor: 'pointer',
+                            cursor: isSaving ? 'not-allowed' : 'pointer',
                             fontWeight: 'bold',
                             boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
                         }}
                     >
-                        Stop Simulation
+                        {isSaving ? 'Saving...' : 'Stop Simulation'}
                     </button>
                 </div>
 

@@ -151,28 +151,33 @@ const Dashboard = () => {
     useEffect(() => {
         const loadResults = async () => {
             setLoading(true);
-            let stored = [];
+            let firestoreResults = [];
+            let localResults = [];
 
-            // Try Firestore first
+            // Load from Firestore
             try {
                 if (user?.uid) {
-                    const firestoreResults = await getUserSimulations(user.uid);
-                    if (firestoreResults.length > 0) {
-                        stored = firestoreResults;
-                    }
+                    firestoreResults = await getUserSimulations(user.uid);
                 }
             } catch (err) {
                 console.warn('Firestore fetch failed, falling back to localStorage:', err);
             }
 
-            // Fallback to localStorage
-            if (stored.length === 0) {
-                try {
-                    stored = JSON.parse(localStorage.getItem('simulation_results') || '[]');
-                } catch (e) {
-                    console.error('localStorage parse error:', e);
-                }
+            // Always load from localStorage too
+            try {
+                localResults = JSON.parse(localStorage.getItem('simulation_results') || '[]');
+            } catch (e) {
+                console.error('localStorage parse error:', e);
             }
+
+            // Merge: prefer Firestore records, fill in localStorage-only ones (not yet synced)
+            const firestoreIds = new Set(firestoreResults.map(r => r.sessionId));
+            const localOnly = localResults.filter(r => r.sessionId && !firestoreIds.has(r.sessionId));
+            const stored = [...firestoreResults, ...localOnly].sort((a, b) => {
+                const timeA = a.createdAt?.toMillis?.() || new Date(a.endTime || a.startTime).getTime() || 0;
+                const timeB = b.createdAt?.toMillis?.() || new Date(b.endTime || b.startTime).getTime() || 0;
+                return timeB - timeA;
+            });
 
             setResults(stored);
 
