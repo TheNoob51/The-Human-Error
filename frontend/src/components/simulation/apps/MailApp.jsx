@@ -171,7 +171,7 @@ const MailApp = () => {
   const handleReportPhishing = () => {
     logInteraction(PHISHING_INTERACTIONS.REPORT_PHISHING, { emailId: scenario.id });
     alert("Phishing reported!");
-    loadNextEmail();
+    loadNextEmail(scenario.id);
   };
 
   return (

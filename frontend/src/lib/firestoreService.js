@@ -3,7 +3,6 @@ import {
     addDoc,
     query,
     where,
-    orderBy,
     getDocs,
     doc,
     getDoc,
@@ -71,15 +70,24 @@ export const saveSimulationResult = async (uid, sessionData) => {
 export const getUserSimulations = async (uid) => {
     if (!uid) return [];
 
+    // Single-field query (auto-indexed, no composite index needed)
     const q = query(
         collection(db, SESSIONS_COLLECTION),
-        where("uid", "==", uid),
-        orderBy("createdAt", "desc")
+        where("uid", "==", uid)
     );
 
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((doc) => ({
+    const results = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
     }));
+
+    // Sort client-side: newest first
+    results.sort((a, b) => {
+        const timeA = a.createdAt?.toMillis?.() || new Date(a.startTime).getTime() || 0;
+        const timeB = b.createdAt?.toMillis?.() || new Date(b.startTime).getTime() || 0;
+        return timeB - timeA;
+    });
+
+    return results;
 };

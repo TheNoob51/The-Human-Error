@@ -16,7 +16,7 @@ router.post('/generate-phishing', async (req, res) => {
             });
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const prompt = `
         Generate a realistic phishing email simulation scenario in valid JSON format.
@@ -94,7 +94,7 @@ router.get('/generate-emails', async (req, res) => {
             return res.json(fallbackEmails);
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const prompt = `
         Generate an array of 3 distinct, realistic phishing email simulation scenarios in valid JSON format.
@@ -157,7 +157,7 @@ router.post('/generate-explanation', async (req, res) => {
             return res.json({ explanation: fallbackExplanation });
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const prompt = `
         You are an expert cybersecurity analyst evaluating a user's performance in a phishing simulation.

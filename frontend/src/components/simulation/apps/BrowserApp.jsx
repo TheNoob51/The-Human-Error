@@ -104,7 +104,7 @@ const SubmitButton = styled.button`
 `;
 
 const BrowserApp = () => {
-  const { logInteraction, loadNextEmail } = useSimulation();
+  const { logInteraction, loadNextEmail, selectedEmailId } = useSimulation();
   const [url, setUrl] = React.useState('http://verify-account.security-check.com/login');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -113,7 +113,7 @@ const BrowserApp = () => {
     e.preventDefault();
     logInteraction(PHISHING_INTERACTIONS.CREDENTIALS_ENTERED, { email });
     alert("Credentials captured! (Simulation continues)");
-    loadNextEmail();
+    loadNextEmail(selectedEmailId);
   };
 
   return (
