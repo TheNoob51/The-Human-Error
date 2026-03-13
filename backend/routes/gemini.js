@@ -6,6 +6,71 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 // The actual check happens inside the route handler
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy_key');
 
+const getProfileSummary = (profile = {}) => {
+    const segments = [
+        profile.personaType && `User type: ${profile.personaType}`,
+        profile.roleTitle && `Role: ${profile.roleTitle}`,
+        profile.department && `Department or field: ${profile.department}`,
+        profile.organizationName && `Organization: ${profile.organizationName}`,
+        profile.industry && `Industry: ${profile.industry}`,
+        profile.workEnvironment && `Work setting: ${profile.workEnvironment}`,
+        profile.experienceLevel && `Experience level: ${profile.experienceLevel}`,
+        profile.emailDomain && `Email domain: ${profile.emailDomain}`,
+        profile.commonTools && `Common tools: ${profile.commonTools}`,
+        profile.simulationFocus && `Training focus: ${profile.simulationFocus}`,
+        profile.notes && `Additional context: ${profile.notes}`,
+    ].filter(Boolean);
+
+    if (segments.length === 0) {
+        return 'Target a general knowledge worker with believable but varied phishing lures.';
+    }
+
+    return segments.join('\n');
+};
+
+const buildFallbackEmails = (profile = {}, count = 3) => {
+    const organization = profile.organizationName || (profile.personaType === 'Student' ? 'your institution' : 'your organization');
+    const role = profile.roleTitle || profile.personaType || 'team member';
+    const department = profile.department || (profile.personaType === 'Student' ? 'student services' : 'operations');
+    const domain = profile.emailDomain || 'support-portal-example.com';
+    const focus = profile.simulationFocus || 'General phishing awareness';
+
+    const templates = [
+        {
+            id: 'e1',
+            senderName: profile.personaType === 'Student' ? 'Student Portal Support' : 'IT Support',
+            senderEmail: `access@${domain.replace(/^[^.]+\./, 'secure-') || 'secure-support-example.com'}`,
+            subject: `${organization}: ${focus.includes('Credential') ? 'Account verification required' : 'Action required on your account'}`,
+            body: `<p>Hello ${role},</p><p>We detected a configuration issue affecting access to ${organization} systems. Please verify your account details before end of day to avoid interruption.</p><p><a href="http://${domain}/verify">Verify Access</a></p>`,
+            linkText: 'Verify Access',
+            linkUrl: `http://${domain}/verify`,
+            clues: ['Urgent account request', 'Link sent by email', 'Verification pressure'],
+        },
+        {
+            id: 'e2',
+            senderName: profile.personaType === 'Student' ? 'Financial Aid Office' : `${department} Team`,
+            senderEmail: `review@${domain}`,
+            subject: profile.personaType === 'Student' ? 'Your enrollment record needs review' : `${department}: review pending for this week`,
+            body: `<p>Hi,</p><p>A new request related to ${department} has been flagged for your review. Open the secure portal below and confirm the details today.</p><p><a href="http://${domain}/review">Open Review Portal</a></p>`,
+            linkText: 'Open Review Portal',
+            linkUrl: `http://${domain}/review`,
+            clues: ['Generic greeting', 'Unexpected review request', 'Email link to portal'],
+        },
+        {
+            id: 'e3',
+            senderName: 'Executive Office',
+            senderEmail: `leadership@${domain}`,
+            subject: `Confidential request for ${role}`,
+            body: `<p>I need your help with a time-sensitive item for ${organization}. Please confirm that you can review the attached instructions immediately and keep this private.</p><p><a href="http://${domain}/confidential">Review Instructions</a></p>`,
+            linkText: 'Review Instructions',
+            linkUrl: `http://${domain}/confidential`,
+            clues: ['Authority impersonation', 'Pressure to act privately', 'Unexpected confidential request'],
+        },
+    ];
+
+    return templates.slice(0, count);
+};
+
 router.post('/generate-phishing', async (req, res) => {
     try {
         if (!process.env.GEMINI_API_KEY) {
@@ -53,40 +118,14 @@ router.post('/generate-phishing', async (req, res) => {
     }
 });
 
-router.get('/generate-emails', async (req, res) => {
-    // Fallback static array of 3 emails
-    const fallbackEmails = [
-        {
-            id: 'e1',
-            senderName: 'IT Support',
-            senderEmail: 'it-helpdesk@company-internal-support.com',
-            subject: 'URGENT: Password Expiry in 24 Hours',
-            body: '<p>Dear Employee,</p><p>Your corporate network password will expire in 24 hours. Please update it immediately to avoid losing access to your accounts.</p><p>Click the link below to update your password:</p><p><a href="http://company-internal-support.com/reset">Update Password Now</a></p><p>Thank you,<br>IT Support</p>',
-            linkText: 'Update Password Now',
-            linkUrl: 'http://company-internal-support.com/reset',
-            clues: ['Urgent tone', 'Suspicious domain (company-internal-support.com instead of usual domain)', 'Generic greeting']
-        },
-        {
-            id: 'e2',
-            senderName: 'HR Payroll',
-            senderEmail: 'payroll@hr-services-portal.net',
-            subject: 'ACTION REQUIRED: Review Your Q3 Tax Documents',
-            body: '<p>Hello,</p><p>Your Q3 tax documents are now available for review. There seems to be a discrepancy in your recent withholding.</p><p>Please log in to the payroll portal to review and correct the information before the end of the week.</p><p><a href="http://hr-services-portal.net/login">Access Payroll Portal</a></p><p>Best regards,<br>HR Department</p>',
-            linkText: 'Access Payroll Portal',
-            linkUrl: 'http://hr-services-portal.net/login',
-            clues: ['Threat of discrepancy', 'Vague external domain', 'Request to log in via email link']
-        },
-        {
-            id: 'e3',
-            senderName: 'CEO Office',
-            senderEmail: 'ceo.office@company-executive-direct.org',
-            subject: 'Confidential: Quick task needed',
-            body: '<p>Are you available right now? I need you to handle a quick, confidential task for me regarding an upcoming client gift. I am currently in a meeting and cannot take calls.</p><p>Please click here to confirm you can assist: <a href="http://company-executive-direct.org/confirm">Confirm Availability</a></p><p>Thanks.</p>',
-            linkText: 'Confirm Availability',
-            linkUrl: 'http://company-executive-direct.org/confirm',
-            clues: ['CEO Fraud / Authority impersonation', 'Unusual request', 'Claiming to be unavailable for verification']
-        }
-    ];
+router.get('/generate-emails', generateEmailsHandler);
+router.post('/generate-emails', generateEmailsHandler);
+
+async function generateEmailsHandler(req, res) {
+    const requestedCount = Number(req.body?.count || req.query?.count || 3);
+    const count = Number.isFinite(requestedCount) ? Math.min(Math.max(requestedCount, 1), 5) : 3;
+    const profile = req.body?.profile || {};
+    const fallbackEmails = buildFallbackEmails(profile, count);
 
     try {
         if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy_key') {
@@ -97,10 +136,20 @@ router.get('/generate-emails', async (req, res) => {
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const prompt = `
-        Generate an array of 3 distinct, realistic phishing email simulation scenarios in valid JSON format.
-        Each should represent a different type of social engineering (e.g., IT urgency, HR issue, CEO fraud).
+        Generate an array of ${count} distinct, realistic phishing email simulation scenarios in valid JSON format.
+        Each should represent a different type of social engineering while matching the target profile below when relevant.
+
+        Target profile:
+        ${getProfileSummary(profile)}
+
+        Adaptation rules:
+        - If the profile is student-oriented, prefer campus, portal, financial aid, schedule, or internship themes.
+        - If the profile is employment-oriented, prefer company, payroll, compliance, procurement, or collaboration-tool themes.
+        - If the profile is a general user, prefer delivery, banking, password reset, and consumer account themes.
+        - Use the organization, role, department, tools, and email domain naturally, but do not make every scenario identical.
+        - Vary the social engineering angle across urgency, authority, reward, curiosity, or routine workflow.
         
-        The JSON output must be a pure JSON array containing EXACTLY 3 objects with the following structure:
+        The JSON output must be a pure JSON array containing EXACTLY ${count} objects with the following structure:
         [
             {
                 "id": "String (unique identifier, e.g., e1, e2, e3)",
@@ -129,7 +178,7 @@ router.get('/generate-emails', async (req, res) => {
 
         const scenarios = JSON.parse(text);
 
-        if (Array.isArray(scenarios) && scenarios.length === 3) {
+        if (Array.isArray(scenarios) && scenarios.length === count) {
             return res.json(scenarios);
         } else {
             console.warn('Gemini returned invalid or incorrect sized array. Using fallback array.');
@@ -140,16 +189,19 @@ router.get('/generate-emails', async (req, res) => {
         console.error('Error in /generate-emails, using fallback:', error);
         return res.json(fallbackEmails);
     }
-});
+}
 
 router.post('/generate-explanation', async (req, res) => {
-    const { interactions, finalRiskLevel, avgHesitationMs } = req.body;
+    const { interactions, finalRiskLevel, avgHesitationMs, profile } = req.body;
 
     const hesitationNote = avgHesitationMs
         ? `The user's average decision time was ${Math.round(avgHesitationMs / 1000)} seconds per action.`
         : '';
+    const profileNote = profile?.roleTitle || profile?.personaType
+        ? ` The simulation was tailored to a ${profile.roleTitle || profile.personaType} context${profile?.organizationName ? ` at ${profile.organizationName}` : ''}.`
+        : '';
 
-    const fallbackExplanation = `The user completed the simulation with a final risk level of ${finalRiskLevel}. This is based on their recorded actions during the scenarios. A ${finalRiskLevel} risk typically indicates ${finalRiskLevel === 'LOW' ? 'good security awareness' : 'areas that need significant improvement in identifying threats'}. ${hesitationNote}`;
+    const fallbackExplanation = `The user completed the simulation with a final risk level of ${finalRiskLevel}. This is based on their recorded actions during the scenarios.${profileNote} A ${finalRiskLevel} risk typically indicates ${finalRiskLevel === 'LOW' ? 'good security awareness' : 'areas that need significant improvement in identifying threats'}. ${hesitationNote}`;
 
     try {
         if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy_key') {
@@ -166,8 +218,9 @@ router.post('/generate-explanation', async (req, res) => {
         - Interactions: ${JSON.stringify(interactions)}
         - Final Assigned Risk Level: ${finalRiskLevel}
         - Average Decision/Hesitation Time: ${avgHesitationMs ? Math.round(avgHesitationMs / 1000) + ' seconds' : 'Not recorded'}
+        - Target Profile: ${getProfileSummary(profile)}
         
-        Write a concise, 3-5 sentence explanation of why the user received this specific risk level based strictly on the actions they took in the interactions array. If hesitation time data is available, comment on whether they acted too quickly (impulsive, under 5 seconds) or took appropriate time to evaluate. Address the user directly (e.g., "You clicked a link..."). Keep the tone professional but instructive.
+        Write a concise, 3-5 sentence explanation of why the user received this specific risk level based strictly on the actions they took in the interactions array. If hesitation time data is available, comment on whether they acted too quickly (impulsive, under 5 seconds) or took appropriate time to evaluate. Briefly mention how the profile-tailored scenario context relates to the user's actions when it is relevant. Address the user directly (e.g., "You clicked a link..."). Keep the tone professional but instructive.
         `;
 
         const result = await model.generateContent(prompt);

@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GithubAuthProvider } from "firebase/auth";
 import { auth, googleProvider } from "../lib/firebase";
 import { createUserProfile } from "../lib/firestoreService";
@@ -129,14 +129,6 @@ const Auth = ({ initialMode = "login" }) => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    // Sync internal state if URL allows direct navigation or prop update
-    if (initialMode && (initialMode === 'login' || initialMode === 'signup')) {
-      setMode(initialMode);
-    }
-  }, [initialMode]);
 
   const handleTabChange = (newMode) => {
     // Clear error when switching modes

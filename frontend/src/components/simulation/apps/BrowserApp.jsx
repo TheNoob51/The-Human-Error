@@ -105,7 +105,6 @@ const SubmitButton = styled.button`
 
 const BrowserApp = () => {
   const { logInteraction, loadNextEmail, selectedEmailId } = useSimulation();
-  const [url, setUrl] = React.useState('http://verify-account.security-check.com/login');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
 

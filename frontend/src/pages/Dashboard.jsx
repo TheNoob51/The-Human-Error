@@ -8,8 +8,6 @@ import {
     MousePointerClick,
     AlertTriangle,
     CheckCircle,
-    XCircle,
-    Bell,
     Clock
 } from "lucide-react";
 
@@ -18,9 +16,9 @@ import Button from "../components/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/Card";
 import Badge from "../components/Badge";
 import Progress from "../components/Progress";
-import Avatar from "../components/Avatar";
+import ProfileDetailsPane from "../components/ProfileDetailsPane";
 import { useAuth } from "../context/AuthContext";
-import { getUserSimulations } from "../lib/firestoreService";
+import { getUserSimulations, upsertUserProfile } from "../lib/firestoreService";
 
 /* Navbar related styles removed in favor of reusable Header */
 
@@ -40,15 +38,6 @@ const MainContent = styled.main`
   display: flex;
   flex-direction: column;
   gap: 2rem;
-`;
-
-const SectionTitle = styled.h2`
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 `;
 
 // Grid Layouts
@@ -147,10 +136,11 @@ const SessionSelect = styled.select`
 
 const Dashboard = () => {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, userProfile, refreshUserProfile } = useAuth();
     const [results, setResults] = useState([]);
     const [selectedSessionId, setSelectedSessionId] = useState('ALL');
     const [loading, setLoading] = useState(true);
+    const [isSavingProfile, setIsSavingProfile] = useState(false);
     const [metrics, setMetrics] = useState({
         totalSimulations: 0,
         highRiskCount: 0,
@@ -307,6 +297,20 @@ const Dashboard = () => {
 
     const recentSession = filteredResults[0] || null;
 
+    const handleProfileSave = async (profileData) => {
+        if (!user?.uid) {
+            throw new Error('No authenticated user found.');
+        }
+
+        setIsSavingProfile(true);
+        try {
+            await upsertUserProfile(user.uid, profileData, user);
+            await refreshUserProfile();
+        } finally {
+            setIsSavingProfile(false);
+        }
+    };
+
     return (
         <PageContainer>
             {/* Top Navigation using reusable Header */}
@@ -327,7 +331,7 @@ const Dashboard = () => {
 
                 <SelectorRow>
                     <span style={{ fontSize: "0.9rem", color: "hsl(var(--muted-foreground))", fontWeight: 600 }}>
-                        View Results:
+                        {loading ? 'Loading Results...' : 'View Results:'}
                     </span>
                     <SessionSelect
                         value={selectedSessionId}
@@ -341,6 +345,13 @@ const Dashboard = () => {
                         ))}
                     </SessionSelect>
                 </SelectorRow>
+
+                <ProfileDetailsPane
+                    user={user}
+                    profile={userProfile}
+                    onSave={handleProfileSave}
+                    isSaving={isSavingProfile}
+                />
 
                 {/* Section 1: Key Metrics */}
                 <MetricsGrid>

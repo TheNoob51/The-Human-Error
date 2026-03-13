@@ -1,7 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 
 const BlackScreen = styled(motion.div)`
   width: 100vw;
@@ -17,26 +16,23 @@ const BlackScreen = styled(motion.div)`
 
 const Title = styled.h1`
   font-weight: 300;
-  margin-bottom: 40px;
+  margin-bottom: 12px;
 `;
 
-const ReturnButton = styled.button`
-  border: 1px solid white;
-  background: transparent;
-  color: white;
-  padding: 10px 30px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: all 0.3s;
-  
-  &:hover {
-    background: white;
-    color: black;
-  }
+const Subtitle = styled.p`
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0;
+  font-size: 15px;
 `;
 
 const ShutdownScreen = () => {
-    const navigate = useNavigate();
+    React.useEffect(() => {
+        const timer = setTimeout(() => {
+            window.location.href = '/dashboard';
+        }, 3000);
+
+        return () => clearTimeout(timer);
+    }, []);
 
     return (
         <BlackScreen
@@ -44,8 +40,8 @@ const ShutdownScreen = () => {
             animate={{ opacity: 1 }}
             transition={{ duration: 1 }}
         >
-            <Title>Simulation Ended</Title>
-            <ReturnButton onClick={() => navigate('/dashboard')}>Return to Dashboard</ReturnButton>
+            <Title>Closing Simulation...</Title>
+            <Subtitle>Syncing your latest data. Redirecting to dashboard in 3 seconds.</Subtitle>
         </BlackScreen>
     );
 };

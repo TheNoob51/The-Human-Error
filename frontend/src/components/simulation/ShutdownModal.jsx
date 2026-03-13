@@ -57,8 +57,8 @@ const ActionButton = styled.button`
   }
 `;
 
-const ShutdownModal = () => {
-    const { isShuttingDown, cancelShutdown, confirmShutdown } = useWindowManager();
+const ShutdownModal = ({ onConfirm, isProcessing = false }) => {
+  const { isShuttingDown, cancelShutdown } = useWindowManager();
 
     if (!isShuttingDown) return null;
 
@@ -74,14 +74,16 @@ const ShutdownModal = () => {
                     animate={{ y: 0, opacity: 1 }}
                 >
                     <Power size={48} style={{ marginBottom: '15px' }} />
-                    <Title>End Simulation?</Title>
+                    <Title>Close Simulation?</Title>
                     <p style={{ color: '#aaa', fontSize: '14px' }}>
-                        Progress will not be saved.
+                      Are you sure you want to close this simulation and sync your progress?
                     </p>
 
                     <ButtonRow>
-                        <ActionButton $confirm onClick={confirmShutdown}>Shut Down</ActionButton>
-                        <ActionButton onClick={cancelShutdown}>Cancel</ActionButton>
+                      <ActionButton $confirm onClick={onConfirm} disabled={isProcessing}>
+                        {isProcessing ? 'Closing...' : 'Yes, Close'}
+                      </ActionButton>
+                      <ActionButton onClick={cancelShutdown} disabled={isProcessing}>Cancel</ActionButton>
                     </ButtonRow>
                 </ModalContent>
             </ModalOverlay>

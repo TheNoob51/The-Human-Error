@@ -34,8 +34,23 @@ const ContentArea = styled.div`
 
 
 const Desktop = () => {
-    const { isShutdown, openWindow } = useWindowManager();
+    const { isShutdown, openWindow, startShutdown, confirmShutdown } = useWindowManager();
     const { endSimulation, isSaving } = useSimulation();
+    const [isEndingSimulation, setIsEndingSimulation] = React.useState(false);
+
+    const handleConfirmClose = async () => {
+        if (isEndingSimulation || isSaving) return;
+
+        setIsEndingSimulation(true);
+        try {
+            await endSimulation({ deferNavigation: true });
+            confirmShutdown();
+        } catch (error) {
+            console.error('Failed to end simulation before shutdown:', error);
+        } finally {
+            setIsEndingSimulation(false);
+        }
+    };
 
     if (isShutdown) {
         return <ShutdownScreen />;
@@ -60,20 +75,20 @@ const Desktop = () => {
                 {/* Stop Simulation Button */}
                 <div style={{ position: 'absolute', top: 20, right: 20 }}>
                     <button
-                        onClick={endSimulation}
-                        disabled={isSaving}
+                        onClick={startShutdown}
+                        disabled={isSaving || isEndingSimulation}
                         style={{
-                            background: isSaving ? '#999' : '#d93025',
+                            background: isSaving || isEndingSimulation ? '#999' : '#d93025',
                             color: 'white',
                             border: 'none',
                             padding: '10px 20px',
                             borderRadius: '5px',
-                            cursor: isSaving ? 'not-allowed' : 'pointer',
+                            cursor: isSaving || isEndingSimulation ? 'not-allowed' : 'pointer',
                             fontWeight: 'bold',
                             boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
                         }}
                     >
-                        {isSaving ? 'Saving...' : 'Stop Simulation'}
+                        {isSaving || isEndingSimulation ? 'Saving...' : 'Stop Simulation'}
                     </button>
                 </div>
 
@@ -109,7 +124,10 @@ const Desktop = () => {
                     <SystemAlert />
                 </SimulationWindow>
 
-                <ShutdownModal />
+                <ShutdownModal
+                    onConfirm={handleConfirmClose}
+                    isProcessing={isEndingSimulation || isSaving}
+                />
             </ContentArea>
 
             <Taskbar />

@@ -17,6 +17,28 @@ const USERS_COLLECTION = "users";
 
 // ─── User Profile ───
 
+const getEmailDomain = (email) => {
+    if (!email || !email.includes("@")) return "";
+    return email.split("@")[1].toLowerCase();
+};
+
+export const buildDefaultUserProfile = (user = null, existingProfile = {}) => ({
+    email: existingProfile.email || user?.email || "",
+    displayName: existingProfile.displayName || user?.displayName || "",
+    photoURL: existingProfile.photoURL || user?.photoURL || null,
+    organizationName: existingProfile.organizationName || "",
+    industry: existingProfile.industry || "",
+    department: existingProfile.department || "",
+    roleTitle: existingProfile.roleTitle || "",
+    personaType: existingProfile.personaType || "",
+    workEnvironment: existingProfile.workEnvironment || "",
+    experienceLevel: existingProfile.experienceLevel || "",
+    emailDomain: existingProfile.emailDomain || getEmailDomain(user?.email),
+    commonTools: existingProfile.commonTools || "",
+    simulationFocus: existingProfile.simulationFocus || "",
+    notes: existingProfile.notes || "",
+});
+
 /**
  * Create or update user profile document on first login / signup
  */
@@ -24,16 +46,56 @@ export const createUserProfile = async (user) => {
     if (!user) return;
     const userRef = doc(db, USERS_COLLECTION, user.uid);
     const snap = await getDoc(userRef);
+    const baseProfile = buildDefaultUserProfile(user, snap.exists() ? snap.data() : {});
 
     if (!snap.exists()) {
         await setDoc(userRef, {
-            email: user.email,
-            displayName: user.displayName || null,
-            photoURL: user.photoURL || null,
+            ...baseProfile,
             createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
         });
+    } else {
+        await setDoc(userRef, {
+            email: baseProfile.email,
+            displayName: baseProfile.displayName,
+            photoURL: baseProfile.photoURL,
+            emailDomain: baseProfile.emailDomain,
+            updatedAt: serverTimestamp(),
+        }, { merge: true });
     }
     return userRef;
+};
+
+export const getUserProfile = async (uid) => {
+    if (!uid) return null;
+
+    const userRef = doc(db, USERS_COLLECTION, uid);
+    const snap = await getDoc(userRef);
+
+    if (!snap.exists()) {
+        return null;
+    }
+
+    return snap.data();
+};
+
+export const upsertUserProfile = async (uid, profileData, user = null) => {
+    if (!uid) return null;
+
+    const userRef = doc(db, USERS_COLLECTION, uid);
+    const currentProfile = (await getDoc(userRef)).data() || {};
+    const nextProfile = buildDefaultUserProfile(user, {
+        ...currentProfile,
+        ...profileData,
+    });
+
+    await setDoc(userRef, {
+        ...nextProfile,
+        createdAt: currentProfile.createdAt || serverTimestamp(),
+        updatedAt: serverTimestamp(),
+    }, { merge: true });
+
+    return nextProfile;
 };
 
 // ─── Simulation Sessions ───
@@ -55,6 +117,7 @@ export const saveSimulationResult = async (uid, sessionData) => {
         explanation: sessionData.explanation || "",
         interactions: sessionData.interactions || [],
         emailsGenerated: sessionData.emailsGenerated || 0,
+        profileSnapshot: sessionData.profileSnapshot || null,
         createdAt: serverTimestamp(),
     });
 

@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { PHISHING_INTERACTIONS } from '../constants';
 import { useAuth } from './AuthContext';
 import { saveSimulationResult } from '../lib/firestoreService';
+import { auth } from '../lib/firebase';
 
 const SimulationContext = createContext();
 
@@ -118,7 +120,7 @@ const allMockEmails = [
 ];
 
 export const SimulationProvider = ({ children }) => {
-    const { user } = useAuth();
+    const { user, userProfile } = useAuth();
 
     // ─── React state (triggers re-renders) ───
     const [simulationState, setSimulationState] = useState('IDLE');
@@ -126,7 +128,7 @@ export const SimulationProvider = ({ children }) => {
     const [inbox, setInbox] = useState([]);
     const [selectedEmailId, setSelectedEmailId] = useState(null);
     const [session, setSession] = useState(null);
-    const [emailOpenTimestamps, setEmailOpenTimestamps] = useState({});
+    const [, setEmailOpenTimestamps] = useState({});
 
     // ─── Refs for mutable tracking (no stale closures) ───
     const resolvedIds = useRef(new Set());
@@ -135,22 +137,40 @@ export const SimulationProvider = ({ children }) => {
     const sessionRef = useRef(null);
     const inboxRef = useRef([]);
 
-    // Keep refs in sync with state
-    sessionRef.current = session;
-    inboxRef.current = inbox;
+    useEffect(() => {
+        sessionRef.current = session;
+    }, [session]);
 
-    const generateId = () => '_' + Math.random().toString(36).substr(2, 9);
+    useEffect(() => {
+        inboxRef.current = inbox;
+    }, [inbox]);
+
+    const generateId = useCallback(() => '_' + Math.random().toString(36).substr(2, 9), []);
+
+    const buildSimulationProfile = useCallback(() => ({
+        organizationName: userProfile?.organizationName || '',
+        industry: userProfile?.industry || '',
+        department: userProfile?.department || '',
+        roleTitle: userProfile?.roleTitle || '',
+        personaType: userProfile?.personaType || '',
+        workEnvironment: userProfile?.workEnvironment || '',
+        experienceLevel: userProfile?.experienceLevel || '',
+        emailDomain: userProfile?.emailDomain || (user?.email?.includes('@') ? user.email.split('@')[1].toLowerCase() : ''),
+        commonTools: userProfile?.commonTools || '',
+        simulationFocus: userProfile?.simulationFocus || '',
+        notes: userProfile?.notes || '',
+    }), [user, userProfile]);
 
     // ─── Pick random templates without repeats ───
-    const pickLocalTemplates = (count) => {
-        const available = allMockEmails
+    const pickLocalTemplates = useCallback((count) => {
+        let available = allMockEmails
             .map((t, i) => ({ template: t, index: i }))
             .filter(({ index }) => !usedTemplates.current.has(index));
 
         // Reset pool if exhausted
         if (available.length === 0) {
             usedTemplates.current = new Set();
-            return pickLocalTemplates(count);
+            available = allMockEmails.map((t, i) => ({ template: t, index: i }));
         }
 
         const shuffled = [...available].sort(() => Math.random() - 0.5);
@@ -164,15 +184,22 @@ export const SimulationProvider = ({ children }) => {
             timestamp: new Date().toISOString(),
             isRead: false,
         }));
-    };
+    }, [generateId]);
 
     // ─── Generate emails: backend-first, local fallback ───
-    const generateEmails = async (count) => {
+    const generateEmails = useCallback(async (count, simulationProfile) => {
         // Try backend (guarded by fetchLock)
         if (!fetchLock.current) {
             fetchLock.current = true;
             try {
-                const response = await fetch('http://localhost:5000/api/generate-emails');
+                const response = await fetch('http://localhost:5000/api/generate-emails', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        count,
+                        profile: simulationProfile,
+                    }),
+                });
                 if (response.ok) {
                     const emails = await response.json();
                     if (Array.isArray(emails) && emails.length > 0) {
@@ -195,7 +222,7 @@ export const SimulationProvider = ({ children }) => {
         // Fallback to local template pool
         console.log(`⚠️ [Local] Using local template pool (backend unavailable or locked)`);
         return pickLocalTemplates(count);
-    };
+    }, [generateId, pickLocalTemplates]);
 
     // ─── Refill inbox when pending emails run low ───
     const refillInbox = useCallback(async () => {
@@ -207,7 +234,7 @@ export const SimulationProvider = ({ children }) => {
         if (pendingCount >= 3) return; // enough emails, skip
 
         const newCount = 2 + Math.floor(Math.random() * 2); // 2 or 3
-        const newEmails = await generateEmails(newCount);
+        const newEmails = await generateEmails(newCount, buildSimulationProfile());
 
         setInbox(prev => {
             // Check again — pause if >= 9 pending
@@ -226,7 +253,7 @@ export const SimulationProvider = ({ children }) => {
                 emailsGenerated: prev.emailsGenerated + newEmails.length,
             };
         });
-    }, []);
+    }, [buildSimulationProfile, generateEmails]);
 
     // ─── Start simulation with instant local emails + background Gemini fetch ───
     const startSimulation = useCallback(async () => {
@@ -235,6 +262,7 @@ export const SimulationProvider = ({ children }) => {
         resolvedIds.current = new Set();
         usedTemplates.current = new Set();
         fetchLock.current = false;
+        const simulationProfile = buildSimulationProfile();
 
         // Instantly show 2 local template emails (no wait)
         const instantEmails = pickLocalTemplates(2);
@@ -247,12 +275,13 @@ export const SimulationProvider = ({ children }) => {
             interactions: [],
             emailsGenerated: instantEmails.length,
             hesitationData: [],
+            profileSnapshot: simulationProfile,
         });
 
         console.log('Simulation started with', instantEmails.length, 'instant local emails');
 
         // Background: fetch Gemini-generated emails and add to inbox
-        generateEmails(3).then(geminiEmails => {
+        generateEmails(3, simulationProfile).then(geminiEmails => {
             setInbox(prev => [...prev, ...geminiEmails]);
             setSession(prev => {
                 if (!prev) return prev;
@@ -263,7 +292,7 @@ export const SimulationProvider = ({ children }) => {
             });
             console.log('Added', geminiEmails.length, 'Gemini emails to inbox in background');
         });
-    }, []);
+    }, [buildSimulationProfile, generateEmails, pickLocalTemplates, generateId]);
 
     // ─── Resolve an email and advance to the next unresolved one ───
     const loadNextEmail = useCallback((resolvedId) => {
@@ -347,9 +376,10 @@ export const SimulationProvider = ({ children }) => {
         return 'LOW';
     };
 
-    const endSimulation = useCallback(async () => {
-        const currentSession = sessionRef.current;
-        const currentInbox = inboxRef.current;
+    const endSimulation = useCallback(async (options = {}) => {
+        const { deferNavigation = false } = options;
+        const currentSession = sessionRef.current || session;
+        const currentInbox = inboxRef.current?.length ? inboxRef.current : inbox;
         if (!currentSession) return;
 
         setIsSaving(true);
@@ -380,9 +410,11 @@ export const SimulationProvider = ({ children }) => {
             console.error('localStorage save failed:', err);
         }
 
-        // 2. Navigate immediately
+        // 2. Navigate immediately unless caller wants manual navigation control
         setSession(partialSession);
-        setSimulationState('COMPLETED');
+        if (!deferNavigation) {
+            setSimulationState('COMPLETED');
+        }
 
         // 3. Fetch Gemini explanation + save to Firestore in background
         let explanation = partialSession.explanation;
@@ -394,6 +426,7 @@ export const SimulationProvider = ({ children }) => {
                     interactions: currentSession.interactions,
                     finalRiskLevel,
                     avgHesitationMs,
+                    profile: currentSession.profileSnapshot || null,
                 })
             });
             if (response.ok) {
@@ -422,9 +455,12 @@ export const SimulationProvider = ({ children }) => {
 
         // 5. Save to Firestore
         try {
-            if (user?.uid) {
-                await saveSimulationResult(user.uid, finalSession);
+            const uid = user?.uid || auth.currentUser?.uid;
+            if (uid) {
+                await saveSimulationResult(uid, finalSession);
                 console.log('Result saved to Firestore');
+            } else {
+                console.warn('Skipping Firestore save: missing authenticated user uid');
             }
         } catch (err) {
             console.error('Failed to save to Firestore:', err);
@@ -432,7 +468,9 @@ export const SimulationProvider = ({ children }) => {
 
         setIsSaving(false);
 
-    }, [user]);
+        return finalSession;
+
+    }, [user, session, inbox]);
 
     const value = {
         simulationState,
