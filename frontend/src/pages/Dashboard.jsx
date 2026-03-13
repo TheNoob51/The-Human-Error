@@ -129,10 +129,27 @@ const Table = styled.table`
   }
 `;
 
+const SelectorRow = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+`;
+
+const SessionSelect = styled.select`
+    padding: 0.5rem 0.75rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    min-width: 220px;
+`;
+
 const Dashboard = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [results, setResults] = useState([]);
+    const [selectedSessionId, setSelectedSessionId] = useState('ALL');
     const [loading, setLoading] = useState(true);
     const [metrics, setMetrics] = useState({
         totalSimulations: 0,
@@ -147,120 +164,46 @@ const Dashboard = () => {
     });
     const [avgHesitation, setAvgHesitation] = useState(null);
 
+    const filteredResults = selectedSessionId === 'ALL'
+        ? results
+        : results.filter((r) => r.__sessionKey === selectedSessionId);
+
     // NOTE: previously was useState(() => {...}, []) which is a bug — should be useEffect
     useEffect(() => {
         const loadResults = async () => {
             setLoading(true);
-            let firestoreResults = [];
-            let localResults = [];
+            let stored = [];
 
             // Load from Firestore
             try {
                 if (user?.uid) {
-                    firestoreResults = await getUserSimulations(user.uid);
+                    stored = await getUserSimulations(user.uid);
                 }
             } catch (err) {
                 console.warn('Firestore fetch failed, falling back to localStorage:', err);
             }
 
-            // Always load from localStorage too
-            try {
-                localResults = JSON.parse(localStorage.getItem('simulation_results') || '[]');
-            } catch (e) {
-                console.error('localStorage parse error:', e);
+            // Fallback only if Firestore returned nothing
+            if (stored.length === 0) {
+                try {
+                    stored = JSON.parse(localStorage.getItem('simulation_results') || '[]');
+                } catch (e) {
+                    console.error('localStorage parse error:', e);
+                }
             }
 
-            // Merge: prefer Firestore records, fill in localStorage-only ones (not yet synced)
-            const firestoreIds = new Set(firestoreResults.map(r => r.sessionId));
-            const localOnly = localResults.filter(r => r.sessionId && !firestoreIds.has(r.sessionId));
-            const stored = [...firestoreResults, ...localOnly].sort((a, b) => {
+            stored.sort((a, b) => {
                 const timeA = a.createdAt?.toMillis?.() || new Date(a.endTime || a.startTime).getTime() || 0;
                 const timeB = b.createdAt?.toMillis?.() || new Date(b.endTime || b.startTime).getTime() || 0;
                 return timeB - timeA;
             });
 
-            setResults(stored);
+            const normalized = stored.map((session, index) => ({
+                ...session,
+                __sessionKey: String(session.sessionId || session.id || `local-${index}`),
+            }));
 
-            if (stored.length > 0) {
-                let high = 0;
-                let low = 0;
-                let totalScore = 0;
-                let urgencyRisky = 0;
-                let authorityRisky = 0;
-                let rewardRisky = 0;
-                let totalHesitation = 0;
-                let hesitationCount = 0;
-
-                const riskMap = {
-                    'VERY_HIGH': 0,
-                    'HIGH': 1,
-                    'MEDIUM': 2,
-                    'LOW': 3,
-                };
-
-                stored.forEach(session => {
-                    const risk = session.finalRiskLevel || 'LOW';
-                    if (risk === 'VERY_HIGH' || risk === 'HIGH') high++;
-                    if (risk === 'MEDIUM' || risk === 'LOW') low++;
-                    totalScore += (riskMap[risk] ?? 3);
-
-                    // Track average hesitation
-                    if (session.avgHesitationMs) {
-                        totalHesitation += session.avgHesitationMs;
-                        hesitationCount++;
-                    }
-
-                    // Analyze interactions for dynamic risk breakdown
-                    const interactions = session.interactions || [];
-                    interactions.forEach(interaction => {
-                        const isFailed = interaction.type === 'CREDENTIALS_ENTERED' || interaction.type === 'FAKE_LINK_CLICKED';
-                        const details = interaction.details || {};
-
-                        // Classify by email clues if available
-                        const emailData = (session.inbox || []).find(e => e.id === details.emailId);
-                        const clues = emailData?.clues?.join(' ').toLowerCase() || '';
-
-                        if (isFailed) {
-                            if (clues.includes('urgent') || clues.includes('expir') || clues.includes('timeline')) {
-                                urgencyRisky++;
-                            }
-                            if (clues.includes('ceo') || clues.includes('authority') || clues.includes('leadership') || clues.includes('executive')) {
-                                authorityRisky++;
-                            }
-                            if (clues.includes('reward') || clues.includes('bonus') || clues.includes('benefit')) {
-                                rewardRisky++;
-                            }
-                        }
-                    });
-                });
-
-                const avg = totalScore / stored.length;
-                const avgPercentage = Math.round((avg / 3) * 100);
-
-                setMetrics({
-                    totalSimulations: stored.length,
-                    highRiskCount: high,
-                    lowRiskCount: low,
-                    averageRiskScore: avgPercentage,
-                });
-
-                // Dynamic risk breakdown
-                const getRiskLevel = (count) => {
-                    if (count >= 3) return { level: 'High Risk', variant: 'destructive' };
-                    if (count >= 1) return { level: 'Medium Risk', variant: 'warning' };
-                    return { level: 'Low Risk', variant: 'success' };
-                };
-
-                setRiskBreakdown({
-                    urgency: { count: urgencyRisky, ...getRiskLevel(urgencyRisky) },
-                    authority: { count: authorityRisky, ...getRiskLevel(authorityRisky) },
-                    reward: { count: rewardRisky, ...getRiskLevel(rewardRisky) },
-                });
-
-                if (hesitationCount > 0) {
-                    setAvgHesitation(Math.round(totalHesitation / hesitationCount / 1000)); // in seconds
-                }
-            }
+            setResults(normalized);
 
             setLoading(false);
         };
@@ -268,7 +211,101 @@ const Dashboard = () => {
         loadResults();
     }, [user]);
 
-    const recentSession = results[0] || null;
+    useEffect(() => {
+        if (selectedSessionId !== 'ALL' && !results.some((r) => r.__sessionKey === selectedSessionId)) {
+            setSelectedSessionId('ALL');
+        }
+    }, [results, selectedSessionId]);
+
+    useEffect(() => {
+        const source = filteredResults;
+
+        if (source.length === 0) {
+            setMetrics({
+                totalSimulations: 0,
+                highRiskCount: 0,
+                lowRiskCount: 0,
+                averageRiskScore: 0,
+            });
+            setRiskBreakdown({
+                urgency: { count: 0, level: 'Low Risk', variant: 'success' },
+                authority: { count: 0, level: 'Low Risk', variant: 'success' },
+                reward: { count: 0, level: 'Low Risk', variant: 'success' },
+            });
+            setAvgHesitation(null);
+            return;
+        }
+
+        let high = 0;
+        let low = 0;
+        let totalScore = 0;
+        let urgencyRisky = 0;
+        let authorityRisky = 0;
+        let rewardRisky = 0;
+        let totalHesitation = 0;
+        let hesitationCount = 0;
+
+        const riskMap = {
+            'VERY_HIGH': 0,
+            'HIGH': 1,
+            'MEDIUM': 2,
+            'LOW': 3,
+        };
+
+        source.forEach(session => {
+            const risk = session.finalRiskLevel || 'LOW';
+            if (risk === 'VERY_HIGH' || risk === 'HIGH') high++;
+            if (risk === 'MEDIUM' || risk === 'LOW') low++;
+            totalScore += (riskMap[risk] ?? 3);
+
+            if (session.avgHesitationMs) {
+                totalHesitation += session.avgHesitationMs;
+                hesitationCount++;
+            }
+
+            const interactions = session.interactions || [];
+            interactions.forEach(interaction => {
+                const isFailed = interaction.type === 'CREDENTIALS_ENTERED' || interaction.type === 'FAKE_LINK_CLICKED';
+                const details = interaction.details || {};
+                const emailData = (session.inbox || []).find(e => e.id === details.emailId);
+                const clues = emailData?.clues?.join(' ').toLowerCase() || '';
+
+                if (isFailed) {
+                    if (clues.includes('urgent') || clues.includes('expir') || clues.includes('timeline')) urgencyRisky++;
+                    if (clues.includes('ceo') || clues.includes('authority') || clues.includes('leadership') || clues.includes('executive')) authorityRisky++;
+                    if (clues.includes('reward') || clues.includes('bonus') || clues.includes('benefit')) rewardRisky++;
+                }
+            });
+        });
+
+        const avg = totalScore / source.length;
+        const avgPercentage = Math.round((avg / 3) * 100);
+
+        setMetrics({
+            totalSimulations: source.length,
+            highRiskCount: high,
+            lowRiskCount: low,
+            averageRiskScore: avgPercentage,
+        });
+
+        const getRiskLevel = (count) => {
+            if (count >= 3) return { level: 'High Risk', variant: 'destructive' };
+            if (count >= 1) return { level: 'Medium Risk', variant: 'warning' };
+            return { level: 'Low Risk', variant: 'success' };
+        };
+
+        setRiskBreakdown({
+            urgency: { count: urgencyRisky, ...getRiskLevel(urgencyRisky) },
+            authority: { count: authorityRisky, ...getRiskLevel(authorityRisky) },
+            reward: { count: rewardRisky, ...getRiskLevel(rewardRisky) },
+        });
+
+        setAvgHesitation(
+            hesitationCount > 0 ? Math.round(totalHesitation / hesitationCount / 1000) : null
+        );
+    }, [filteredResults]);
+
+    const recentSession = filteredResults[0] || null;
 
     return (
         <PageContainer>
@@ -287,6 +324,23 @@ const Dashboard = () => {
                         Start Simulation
                     </Button>
                 </div>
+
+                <SelectorRow>
+                    <span style={{ fontSize: "0.9rem", color: "hsl(var(--muted-foreground))", fontWeight: 600 }}>
+                        View Results:
+                    </span>
+                    <SessionSelect
+                        value={selectedSessionId}
+                        onChange={(e) => setSelectedSessionId(e.target.value)}
+                    >
+                        <option value="ALL">All Simulations</option>
+                        {results.map((session, index) => (
+                            <option key={session.__sessionKey || index} value={session.__sessionKey}>
+                                {`Simulation ${index + 1} - ${new Date(session.endTime || session.startTime).toLocaleDateString()}`}
+                            </option>
+                        ))}
+                    </SessionSelect>
+                </SelectorRow>
 
                 {/* Section 1: Key Metrics */}
                 <MetricsGrid>
@@ -409,10 +463,13 @@ const Dashboard = () => {
                     </Card>
                 </InsightsGrid>
 
-                {/* Section 3: Most Recent Session */}
+                {/* Section 3: Selected Session Details */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Recent Session {recentSession && <Badge variant="outline" style={{ marginLeft: "10px", fontSize: "0.75rem" }}>{new Date(recentSession.endTime).toLocaleDateString()}</Badge>}</CardTitle>
+                        <CardTitle>
+                            {selectedSessionId === 'ALL' ? 'Most Recent Session (All Simulations)' : 'Selected Simulation'}
+                            {recentSession && <Badge variant="outline" style={{ marginLeft: "10px", fontSize: "0.75rem" }}>{new Date(recentSession.endTime || recentSession.startTime).toLocaleDateString()}</Badge>}
+                        </CardTitle>
                     </CardHeader>
                     <CardContent style={{ padding: 0 }}>
                         {recentSession ? (

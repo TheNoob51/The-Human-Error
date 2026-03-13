@@ -222,7 +222,7 @@ const Landing = () => {
             </MainContent>
 
             <Footer>
-                <p>Built by Gyan | Capstone Project 2026</p>
+                <p>Built by Team 1 | Capstone Project 2026</p>
             </Footer>
         </PageContainer>
     );
