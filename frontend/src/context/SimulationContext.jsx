@@ -117,6 +117,68 @@ const allMockEmails = [
         linkUrl: "open-slack",
         clues: ["Fake Slack domain", "Authority impersonation", "Vague message content"],
     },
+
+    // ─── Legitimate emails (correct identifications below) ───
+    {
+        senderName: "IT Department",
+        senderEmail: "it@company.com",
+        subject: "Scheduled Maintenance — This Saturday 10PM–2AM",
+        body: "<p>Hi Team,</p><p>We will be performing scheduled system maintenance this Saturday from 10PM to 2AM. Internal tools may be temporarily unavailable during this window.</p><p>No action is required from you. Apologies for any inconvenience.</p>",
+        linkText: "View Maintenance Details",
+        linkUrl: "maintenance-schedule",
+        clues: [],
+        isLegitimate: true,
+    },
+    {
+        senderName: "Sarah Chen (HR Manager)",
+        senderEmail: "sarah.chen@company.com",
+        subject: "Team Lunch — Friday 12:30PM",
+        body: "<p>Hi everyone,</p><p>Just a reminder about our monthly team lunch this Friday at 12:30PM in the 3rd floor conference room.</p><p>Please RSVP by Thursday so we can arrange the right amount of catering.</p>",
+        linkText: "RSVP Here",
+        linkUrl: "rsvp-lunch",
+        clues: [],
+        isLegitimate: true,
+    },
+    {
+        senderName: "Finance Department",
+        senderEmail: "finance@company.com",
+        subject: "Your Payslip for March is Ready",
+        body: "<p>Dear Team Member,</p><p>Your payslip for March has been processed and is available in the employee self-service portal.</p><p>Payments will be deposited by end of business today. Please reply to this email if you have any queries.</p>",
+        linkText: "View Payslip",
+        linkUrl: "view-payslip",
+        clues: [],
+        isLegitimate: true,
+    },
+    {
+        senderName: "Alex Wong — Project Manager",
+        senderEmail: "alex.wong@company.com",
+        subject: "Action Items from Today's Standup",
+        body: "<p>Hi team,</p><p>Following up from this morning's standup — I have documented all action items and assigned owners in Notion.</p><p>Please review your tasks and update progress by end of week. Let me know if anything is blocked.</p>",
+        linkText: "View Action Items",
+        linkUrl: "view-actions",
+        clues: [],
+        isLegitimate: true,
+    },
+    {
+        senderName: "Slack",
+        senderEmail: "feedback@slack.com",
+        subject: "Your March Workspace Activity Summary",
+        body: "<p>Hi,</p><p>Your Slack workspace activity summary for March is ready. You sent 248 messages and participated in 12 channels this month.</p><p>Keep up the great collaboration!</p>",
+        linkText: "View Full Report",
+        linkUrl: "slack-report",
+        clues: [],
+        isLegitimate: true,
+    },
+    {
+        senderName: "IT Security",
+        senderEmail: "security@company.com",
+        subject: "Reminder: VPN Required When Working Remotely",
+        body: "<p>Dear All,</p><p>As a reminder, all employees working remotely must connect through the company VPN before accessing internal resources.</p><p>If you need help setting up the VPN client, please visit the IT helpdesk portal or reply to this email — we're happy to help.</p>",
+        linkText: "VPN Setup Guide",
+        linkUrl: "vpn-setup",
+        clues: [],
+        isLegitimate: true,
+    },
 ];
 
 export const SimulationProvider = ({ children }) => {
@@ -186,7 +248,7 @@ export const SimulationProvider = ({ children }) => {
         }));
     }, [generateId]);
 
-    // ─── Generate emails: backend-first, local fallback ───
+    // ─── Generate emails: backend-first, local fallback only on failure ───
     const generateEmails = useCallback(async (count, simulationProfile) => {
         // Try backend (guarded by fetchLock)
         if (!fetchLock.current) {
@@ -213,6 +275,7 @@ export const SimulationProvider = ({ children }) => {
                         }));
                     }
                 }
+                console.warn('Backend responded without usable emails, falling back to local templates.');
             } catch (err) {
                 console.warn('Backend unavailable, using local templates:', err.message);
             }
@@ -255,7 +318,7 @@ export const SimulationProvider = ({ children }) => {
         });
     }, [buildSimulationProfile, generateEmails]);
 
-    // ─── Start simulation with instant local emails + background Gemini fetch ───
+    // ─── Start simulation using backend-generated emails first ───
     const startSimulation = useCallback(async () => {
         setSimulationState('RUNNING');
         setEmailOpenTimestamps({});
@@ -264,35 +327,22 @@ export const SimulationProvider = ({ children }) => {
         fetchLock.current = false;
         const simulationProfile = buildSimulationProfile();
 
-        // Instantly show 2 local template emails (no wait)
-        const instantEmails = pickLocalTemplates(2);
-        setInbox(instantEmails);
-        setSelectedEmailId(instantEmails[0]?.id || null);
+        // Prefer API-generated emails for initial inbox
+        const initialEmails = await generateEmails(3, simulationProfile);
+        setInbox(initialEmails);
+        setSelectedEmailId(initialEmails[0]?.id || null);
 
         setSession({
             sessionId: generateId(),
             startTime: new Date().toISOString(),
             interactions: [],
-            emailsGenerated: instantEmails.length,
+            emailsGenerated: initialEmails.length,
             hesitationData: [],
             profileSnapshot: simulationProfile,
         });
 
-        console.log('Simulation started with', instantEmails.length, 'instant local emails');
-
-        // Background: fetch Gemini-generated emails and add to inbox
-        generateEmails(3, simulationProfile).then(geminiEmails => {
-            setInbox(prev => [...prev, ...geminiEmails]);
-            setSession(prev => {
-                if (!prev) return prev;
-                return {
-                    ...prev,
-                    emailsGenerated: prev.emailsGenerated + geminiEmails.length,
-                };
-            });
-            console.log('Added', geminiEmails.length, 'Gemini emails to inbox in background');
-        });
-    }, [buildSimulationProfile, generateEmails, pickLocalTemplates, generateId]);
+        console.log('Simulation started with', initialEmails.length, 'API-first emails');
+    }, [buildSimulationProfile, generateEmails, generateId]);
 
     // ─── Resolve an email and advance to the next unresolved one ───
     const loadNextEmail = useCallback((resolvedId) => {
@@ -472,11 +522,14 @@ export const SimulationProvider = ({ children }) => {
 
     }, [user, session, inbox]);
 
+    const selectedEmail = inbox.find(e => e.id === selectedEmailId) || null;
+
     const value = {
         simulationState,
         isSaving,
         inbox,
         selectedEmailId,
+        selectedEmail,
         session,
         startSimulation,
         logInteraction,

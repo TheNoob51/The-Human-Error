@@ -104,7 +104,8 @@ const SubmitButton = styled.button`
 `;
 
 const BrowserApp = () => {
-  const { logInteraction, loadNextEmail, selectedEmailId } = useSimulation();
+  const { logInteraction, loadNextEmail, selectedEmailId, selectedEmail } = useSimulation();
+  const isLegitimate = selectedEmail?.isLegitimate || false;
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
 
@@ -122,25 +123,46 @@ const BrowserApp = () => {
         <ArrowRight size={16} color="#888" />
         <RefreshCw size={14} color="#5f6368" />
         <UrlInput>
-          <span role="img" aria-label="lock">🔒</span> company-portal-login-secure.net/auth
+          <span role="img" aria-label="lock">🔒</span>{' '}
+          {isLegitimate ? 'internal.company.com/portal' : 'company-portal-login-secure.net/auth'}
         </UrlInput>
       </AddressBar>
 
-      <ExpiryBanner>
-        <XCircle size={16} />
-        <span>Session expired. Please login again to continue.</span>
-      </ExpiryBanner>
+      {!isLegitimate && (
+        <ExpiryBanner>
+          <XCircle size={16} />
+          <span>Session expired. Please login again to continue.</span>
+        </ExpiryBanner>
+      )}
 
       <WebContent>
-        <LoginForm>
-          <Logo>Company Corp</Logo>
-          <div style={{ textAlign: 'left', fontSize: '14px', marginBottom: '5px' }}>Email</div>
-          <Input type="text" placeholder="user@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <div style={{ textAlign: 'left', fontSize: '14px', marginBottom: '5px' }}>Password</div>
-          <Input type="password" placeholder="********" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <SubmitButton onClick={handleLogin}>Sign In</SubmitButton>
-          <div style={{ marginTop: '15px', fontSize: '12px', color: '#1a73e8', cursor: 'pointer' }}>Forgot password?</div>
-        </LoginForm>
+        {isLegitimate ? (
+          <LoginForm>
+            <Logo style={{ color: '#1a73e8' }}>Company Portal</Logo>
+            <div style={{ fontSize: '14px', color: '#2e7d32', marginBottom: '15px', fontWeight: 600 }}>
+              ✓ Page loaded successfully
+            </div>
+            <div style={{ fontSize: '13px', color: '#555', marginBottom: '20px', textAlign: 'left', lineHeight: 1.6 }}>
+              You are viewing an internal company page. This link came from a legitimate sender within your organization.
+            </div>
+            <SubmitButton
+              style={{ background: '#2e7d32' }}
+              onClick={() => loadNextEmail(selectedEmailId)}
+            >
+              Done — Return to Inbox
+            </SubmitButton>
+          </LoginForm>
+        ) : (
+          <LoginForm>
+            <Logo>Company Corp</Logo>
+            <div style={{ textAlign: 'left', fontSize: '14px', marginBottom: '5px' }}>Email</div>
+            <Input type="text" placeholder="user@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <div style={{ textAlign: 'left', fontSize: '14px', marginBottom: '5px' }}>Password</div>
+            <Input type="password" placeholder="********" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <SubmitButton onClick={handleLogin}>Sign In</SubmitButton>
+            <div style={{ marginTop: '15px', fontSize: '12px', color: '#1a73e8', cursor: 'pointer' }}>Forgot password?</div>
+          </LoginForm>
+        )}
       </WebContent>
     </BrowserLayout>
   );

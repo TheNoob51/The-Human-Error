@@ -71,6 +71,96 @@ const buildFallbackEmails = (profile = {}, count = 3) => {
     return templates.slice(0, count);
 };
 
+const buildFallbackAlert = (scenario = 'update') => {
+    if (scenario === 'mfa') {
+        return {
+            type: 'phishing',
+            scenario: 'mfa',
+            title: 'Login Approval Required',
+            message: 'Approve sign-in request for your account.',
+            source: 'Company Authenticator',
+            cta: 'Approve',
+        };
+    }
+
+    return {
+        type: 'phishing',
+        scenario: 'update',
+        title: 'System Update Required',
+        message: 'A critical system update is required to continue using your device.',
+        source: 'System Updater',
+        cta: 'Install Now',
+    };
+};
+
+router.post('/generate-alert', async (req, res) => {
+    const scenario = req.body?.scenario === 'mfa' ? 'mfa' : 'update';
+    const profile = req.body?.profile || {};
+    const recentInteractions = Array.isArray(req.body?.recentInteractions) ? req.body.recentInteractions.slice(-8) : [];
+    const fallbackAlert = buildFallbackAlert(scenario);
+
+    try {
+        if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy_key') {
+            console.warn('GEMINI_API_KEY not configured or is dummy. Using fallback alert.');
+            return res.json(fallbackAlert);
+        }
+
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const prompt = `
+        Generate one cybersecurity behavioral simulation alert as valid JSON only.
+
+        Required schema (must match exactly):
+        {
+            "type": "phishing",
+            "scenario": "${scenario}",
+            "title": "string",
+            "message": "string",
+            "source": "string",
+            "cta": "string"
+        }
+
+        Context:
+        - Target profile:
+        ${getProfileSummary(profile)}
+        - Recent interactions (latest first): ${JSON.stringify(recentInteractions)}
+
+        Rules:
+        - Keep language concise and realistic for enterprise security prompts.
+        - Do not include markdown, comments, or extra keys.
+        - "type" must be "phishing".
+        - "scenario" must stay "${scenario}".
+        ${scenario === 'mfa'
+                ? '- The CTA should be equivalent to approving a login request.'
+                : '- The CTA should be equivalent to installing or applying an update.'}
+        `;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        let text = response.text();
+
+        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+        const parsed = JSON.parse(text);
+        const isValid =
+            parsed &&
+            parsed.type === 'phishing' &&
+            parsed.scenario === scenario &&
+            typeof parsed.title === 'string' &&
+            typeof parsed.message === 'string' &&
+            typeof parsed.source === 'string' &&
+            typeof parsed.cta === 'string';
+
+        if (!isValid) {
+            return res.json(fallbackAlert);
+        }
+
+        return res.json(parsed);
+    } catch (error) {
+        console.error('Error in /generate-alert, using fallback:', error);
+        return res.json(fallbackAlert);
+    }
+});
+
 router.post('/generate-phishing', async (req, res) => {
     try {
         if (!process.env.GEMINI_API_KEY) {

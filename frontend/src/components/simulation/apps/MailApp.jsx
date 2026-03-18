@@ -162,15 +162,39 @@ const MailApp = () => {
       alert("You have already taken action on this email.");
       return;
     }
-    logInteraction(PHISHING_INTERACTIONS.FAKE_LINK_CLICKED, { link: scenario.linkUrl, emailId: scenario.id });
+    if (scenario.isLegitimate) {
+      logInteraction(PHISHING_INTERACTIONS.LEGIT_LINK_CLICKED, { link: scenario.linkUrl, emailId: scenario.id });
+    } else {
+      logInteraction(PHISHING_INTERACTIONS.FAKE_LINK_CLICKED, { link: scenario.linkUrl, emailId: scenario.id });
+    }
     openWindow('browser');
-    // Don't call loadNextEmail here — BrowserApp handles it after credential submission
+    // For phishing emails: BrowserApp handles advance after credential submission
+    // For legit emails: BrowserApp shows safe page with a "Return to Inbox" button
   };
 
   const handleInspectSender = () => {
     logInteraction(PHISHING_INTERACTIONS.INSPECT_SENDER, { emailId: scenario.id });
     const domain = scenario.senderEmail.split('@')[1] || 'unknown';
-    alert(`Sender Domain: ${domain} (Suspicious)`);
+    if (scenario.isLegitimate) {
+      alert(`Sender Domain: ${domain}\n\n✓ This domain appears to be a legitimate company or trusted service domain.`);
+    } else {
+      alert(`Sender Domain: ${domain}\n\n⚠️ This domain looks suspicious! It may be impersonating a trusted service.`);
+    }
+  };
+
+  const handleMarkAsSafe = () => {
+    if (scenario.resolved) {
+      alert("You have already taken action on this email.");
+      return;
+    }
+    if (scenario.isLegitimate) {
+      logInteraction(PHISHING_INTERACTIONS.MARKED_AS_SAFE, { emailId: scenario.id });
+      alert('✅ Correct! You correctly identified this as a legitimate internal email.');
+    } else {
+      logInteraction(PHISHING_INTERACTIONS.MISSED_PHISHING, { emailId: scenario.id });
+      alert('⚠️ Incorrect! That was a phishing email. Always check sender domains and suspicious links carefully.');
+    }
+    loadNextEmail(scenario.id);
   };
 
   const handleReportPhishing = () => {
@@ -178,8 +202,13 @@ const MailApp = () => {
       alert("You have already taken action on this email.");
       return;
     }
-    logInteraction(PHISHING_INTERACTIONS.REPORT_PHISHING, { emailId: scenario.id });
-    alert("Phishing reported!");
+    if (scenario.isLegitimate) {
+      logInteraction(PHISHING_INTERACTIONS.REPORTED_LEGIT_AS_PHISHING, { emailId: scenario.id });
+      alert('❌ That was a legitimate email from your organization! Being overly cautious can disrupt workflows — check sender domains carefully.');
+    } else {
+      logInteraction(PHISHING_INTERACTIONS.REPORT_PHISHING, { emailId: scenario.id });
+      alert('✅ Correct! You successfully identified and reported a phishing email.');
+    }
     loadNextEmail(scenario.id);
   };
 
@@ -222,6 +251,7 @@ const MailApp = () => {
 
             <ActionRow>
               <SecondaryButton onClick={handleInspectSender}>Inspect Sender</SecondaryButton>
+              <SecondaryButton onClick={handleMarkAsSafe}>Mark as Safe</SecondaryButton>
               <SecondaryButton $danger onClick={handleReportPhishing}>Report Phishing</SecondaryButton>
             </ActionRow>
           </>
