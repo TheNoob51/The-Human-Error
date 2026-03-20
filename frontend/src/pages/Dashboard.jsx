@@ -324,9 +324,14 @@ const Dashboard = () => {
                         <h1 style={{ fontSize: "2rem", fontWeight: 800, marginBottom: "0.25rem" }}>Security Dashboard</h1>
                         <p style={{ color: "hsl(var(--muted-foreground))" }}>Behavioral insights based on simulated social engineering scenarios.</p>
                     </div>
-                    <Button onClick={() => navigate("/simulation")}>
-                        Start Simulation
-                    </Button>
+                    <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                        <Button variant="outline" onClick={() => navigate("/training")}>
+                            Start Training
+                        </Button>
+                        <Button onClick={() => navigate("/simulation")}>
+                            Start Simulation
+                        </Button>
+                    </div>
                 </div>
 
                 <SelectorRow>

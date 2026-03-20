@@ -5,6 +5,11 @@ import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import TurnSimulation from "./pages/TurnSimulation";
+import TrainingHome from "./pages/training/TrainingHome";
+import TrainingCategory from "./pages/training/TrainingCategory";
+import TrainingSimulator from "./pages/training/TrainingSimulator";
+import TrainingThreatGenerator from "./pages/training/TrainingThreatGenerator";
+import TrainingGame from "./pages/training/TrainingGame";
 
 function App() {
   return (
@@ -28,6 +33,46 @@ function App() {
             element={
               <ProtectedRoute>
                 <TurnSimulation />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/training"
+            element={
+              <ProtectedRoute>
+                <TrainingHome />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/training/threat-generator"
+            element={
+              <ProtectedRoute>
+                <TrainingThreatGenerator />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/training/game"
+            element={
+              <ProtectedRoute>
+                <TrainingGame />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/training/simulator/:scamId"
+            element={
+              <ProtectedRoute>
+                <TrainingSimulator />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/training/:categoryId"
+            element={
+              <ProtectedRoute>
+                <TrainingCategory />
               </ProtectedRoute>
             }
           />

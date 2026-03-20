@@ -10,9 +10,11 @@ app.use(express.json());
 
 // Import Routes
 const geminiRoutes = require('./routes/gemini');
+const trainingThreatRoutes = require('./routes/trainingThreats');
 
 // Use Routes
 app.use('/api', geminiRoutes);
+app.use('/api', trainingThreatRoutes);
 
 app.get('/', (req, res) => {
     res.send('CyberSecurity Simulation Backend Running');
