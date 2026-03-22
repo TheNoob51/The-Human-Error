@@ -8,7 +8,6 @@ const buttonVariants = {
     box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
     &:hover {
       background: linear-gradient(140deg, #2563eb, #1d4ed8);
-      transform: translateY(-4px);
       box-shadow: 0 16px 30px rgba(37, 99, 235, 0.42);
     }
   `,
@@ -27,7 +26,6 @@ const buttonVariants = {
     &:hover {
       background-color: rgba(59, 130, 246, 0.18);
       border-color: rgba(59, 130, 246, 0.42);
-      transform: translateY(-4px);
     }
   `,
     secondary: css`
@@ -42,7 +40,6 @@ const buttonVariants = {
     color: hsl(var(--foreground));
     &:hover {
       background-color: rgba(59, 130, 246, 0.18);
-      transform: translateY(-4px);
     }
   `,
     link: css`

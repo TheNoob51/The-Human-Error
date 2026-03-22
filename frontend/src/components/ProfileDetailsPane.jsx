@@ -22,6 +22,18 @@ const PaneGrid = styled.div`
 const LeftAlignedCard = styled(Card)`
   text-align: left;
   align-items: stretch;
+
+  &:hover {
+    box-shadow: 0 14px 34px rgba(2, 6, 23, 0.35);
+    border-color: var(--border);
+  }
+`;
+
+const StaticButton = styled(Button)`
+  &:hover {
+    transform: none;
+    box-shadow: inherit;
+  }
 `;
 
 const Form = styled.form`
@@ -372,17 +384,17 @@ const ProfileDetailsPane = ({ user, profile, onSave, isSaving }) => {
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 {isEditing ? (
                   <>
-                    <Button type="button" variant="ghost" onClick={handleCancel} disabled={isSaving}>
+                    <StaticButton type="button" variant="ghost" onClick={handleCancel} disabled={isSaving}>
                       Cancel
-                    </Button>
-                    <Button type="submit" disabled={isSaving}>
+                    </StaticButton>
+                    <StaticButton type="submit" disabled={isSaving}>
                       {isSaving ? "Saving..." : "Save Profile"}
-                    </Button>
+                    </StaticButton>
                   </>
                 ) : (
-                  <Button type="button" onClick={handleEdit}>
+                  <StaticButton type="button" onClick={handleEdit}>
                     Edit Profile
-                  </Button>
+                  </StaticButton>
                 )}
               </div>
             </FooterRow>

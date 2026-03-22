@@ -12,7 +12,6 @@ const CardContainer = styled.div`
   transition: all 0.3s ease;
 
   &:hover {
-    transform: translateY(-4px);
     box-shadow: 0 16px 40px rgba(59, 130, 246, 0.18);
     border-color: rgba(59, 130, 246, 0.35);
   }

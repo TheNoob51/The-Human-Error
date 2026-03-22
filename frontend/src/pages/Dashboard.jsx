@@ -111,8 +111,22 @@ const MetricLabel = styled.p`
     color: var(--text-secondary);
 `;
 
-const MetricCard = styled(Card)`
+const DashboardCard = styled(Card)`
+    &:hover {
+        box-shadow: 0 14px 34px rgba(2, 6, 23, 0.35);
+        border-color: var(--border);
+    }
+`;
+
+const MetricCard = styled(DashboardCard)`
     text-align: left;
+`;
+
+const DashboardButton = styled(Button)`
+    &:hover {
+        transform: none;
+        box-shadow: inherit;
+    }
 `;
 
 const ScoreMeta = styled.span`
@@ -175,11 +189,6 @@ const RiskItem = styled.div`
     border: 1px solid var(--border);
   background-color: hsl(var(--muted) / 0.3);
     transition: all 0.3s ease;
-
-    &:hover {
-        transform: translateY(-4px);
-        border-color: rgba(59, 130, 246, 0.4);
-    }
 `;
 
 const Table = styled.table`
@@ -204,11 +213,6 @@ const Table = styled.table`
   tr:last-child td {
     border-bottom: none;
   }
-
-  /* basic hover row */
-  tbody tr:hover {
-      background-color: rgba(59, 130, 246, 0.12);
-  }
 `;
 
 const SelectorRow = styled.div`
@@ -227,10 +231,6 @@ const SessionSelect = styled.select`
     color: hsl(var(--foreground));
     min-width: 220px;
         transition: all 0.3s ease;
-
-        &:hover {
-            border-color: rgba(59, 130, 246, 0.42);
-        }
 `;
 
 const Dashboard = () => {
@@ -424,12 +424,12 @@ const Dashboard = () => {
                         <DashboardSubtitle>Behavioral insights based on simulated social engineering scenarios.</DashboardSubtitle>
                     </div>
                     <HeaderActions>
-                        <Button variant="outline" onClick={() => navigate("/training")}>
+                        <DashboardButton variant="outline" onClick={() => navigate("/training")}>
                             Start Training
-                        </Button>
-                        <Button onClick={() => navigate("/simulation")}>
+                        </DashboardButton>
+                        <DashboardButton onClick={() => navigate("/simulation")}>
                             Start Simulation
-                        </Button>
+                        </DashboardButton>
                     </HeaderActions>
                 </PageHeaderRow>
 
@@ -520,7 +520,7 @@ const Dashboard = () => {
                 {/* Section 2: Behavior Insights */}
                 <SectionBlock>
                 <InsightsGrid>
-                    <Card>
+                    <DashboardCard>
                         <CardHeader>
                             <CardTitle>Risk Breakdown</CardTitle>
                         </CardHeader>
@@ -560,9 +560,9 @@ const Dashboard = () => {
                                 )}
                             </RiskList>
                         </CardContent>
-                    </Card>
+                    </DashboardCard>
 
-                    <Card style={{ backgroundColor: "hsl(var(--secondary) / 0.5)", border: "none" }}>
+                    <DashboardCard style={{ backgroundColor: "hsl(var(--secondary) / 0.5)", border: "none" }}>
                         <CardHeader>
                             <CardTitle>Recommended Focus</CardTitle>
                         </CardHeader>
@@ -570,21 +570,21 @@ const Dashboard = () => {
                             <p style={{ lineHeight: 1.6, marginBottom: "1.5rem" }}>
                                 You show a vulnerability to <strong>urgency-based</strong> social engineering triggers. Attackers use this to bypass critical thinking.
                             </p>
-                            <Button
+                            <DashboardButton
                                 variant="outline"
                                 style={{ width: "100%", backgroundColor: "hsl(var(--background))" }}
                                 onClick={() => navigate("/simulation")}
                             >
                                 Start Urgency Training
-                            </Button>
+                            </DashboardButton>
                         </CardContent>
-                    </Card>
+                    </DashboardCard>
                 </InsightsGrid>
                 </SectionBlock>
 
                 {/* Section 3: Selected Session Details */}
                 <SectionBlock>
-                <Card>
+                <DashboardCard>
                     <CardHeader>
                         <CardTitle>
                             {selectedSessionId === 'ALL' ? 'Most Recent Session (All Simulations)' : 'Selected Simulation'}
@@ -653,16 +653,16 @@ const Dashboard = () => {
                         ) : (
                             <div style={{ padding: "3rem", textAlign: "center", color: "hsl(var(--muted-foreground))" }}>
                                 <p>No simulation sessions recorded yet.</p>
-                                <Button
+                                <DashboardButton
                                     onClick={() => navigate("/simulation")}
                                     style={{ marginTop: "1rem" }}
                                 >
                                     Start First Simulation
-                                </Button>
+                                </DashboardButton>
                             </div>
                         )}
                     </CardContent>
-                </Card>
+                </DashboardCard>
                 </SectionBlock>
 
             </MainContent>
