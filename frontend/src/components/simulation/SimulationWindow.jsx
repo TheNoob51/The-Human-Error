@@ -192,3 +192,4 @@ const SimulationWindow = ({ id, title, icon, children, width = 800, height = 600
 };
 
 export default SimulationWindow;
+

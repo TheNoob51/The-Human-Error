@@ -57,3 +57,4 @@ const TrainingLayout = ({ title, subtitle, children }) => {
 };
 
 export default TrainingLayout;
+

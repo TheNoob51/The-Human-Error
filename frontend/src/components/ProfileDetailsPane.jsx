@@ -51,7 +51,7 @@ const Select = styled.select`
   height: 2.5rem;
   width: 100%;
   border-radius: var(--radius);
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   background-color: hsl(var(--background));
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
@@ -68,7 +68,7 @@ const Textarea = styled.textarea`
   min-height: 6.75rem;
   width: 100%;
   border-radius: var(--radius);
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   background-color: hsl(var(--background));
   padding: 0.75rem;
   font-size: 0.875rem;
@@ -101,7 +101,7 @@ const HighlightRow = styled.div`
   gap: 0.75rem;
   padding: 0.85rem 1rem;
   border-radius: var(--radius);
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   background: hsl(var(--muted) / 0.3);
 
   svg {

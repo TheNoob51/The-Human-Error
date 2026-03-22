@@ -58,3 +58,4 @@ const DesktopIcon = ({ label, icon, onClick }) => {
 };
 
 export default DesktopIcon;
+

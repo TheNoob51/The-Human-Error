@@ -3,10 +3,13 @@ import { motion } from "framer-motion";
 
 const buttonVariants = {
     default: css`
-    background-color: hsl(var(--primary));
-    color: hsl(var(--primary-foreground));
+    background: linear-gradient(140deg, #3b82f6, #2563eb);
+    color: #eaf2ff;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
     &:hover {
-      opacity: 0.9;
+      background: linear-gradient(140deg, #2563eb, #1d4ed8);
+      transform: translateY(-4px);
+      box-shadow: 0 16px 30px rgba(37, 99, 235, 0.42);
     }
   `,
     destructive: css`
@@ -18,10 +21,13 @@ const buttonVariants = {
   `,
     outline: css`
     border: 1px solid hsl(var(--input));
-    background-color: transparent;
+    background-color: rgba(15, 23, 42, 0.45);
+    color: hsl(var(--foreground));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
     &:hover {
-      background-color: hsl(var(--accent));
-      color: hsl(var(--accent-foreground));
+      background-color: rgba(59, 130, 246, 0.18);
+      border-color: rgba(59, 130, 246, 0.42);
+      transform: translateY(-4px);
     }
   `,
     secondary: css`
@@ -33,9 +39,10 @@ const buttonVariants = {
   `,
     ghost: css`
     background-color: transparent;
+    color: hsl(var(--foreground));
     &:hover {
-      background-color: hsl(var(--accent));
-      color: hsl(var(--accent-foreground));
+      background-color: rgba(59, 130, 246, 0.18);
+      transform: translateY(-4px);
     }
   `,
     link: css`
@@ -79,7 +86,7 @@ const StyledButton = styled(motion.button)`
   font-weight: 500;
   border: none;
   cursor: pointer;
-  transition: all 0.2s ease-in-out;
+  transition: all 0.3s ease;
   
   &:disabled {
     pointer-events: none;
@@ -88,8 +95,8 @@ const StyledButton = styled(motion.button)`
 
   /* Focus ring handled in global css usually, but adding basic reset here too */
   &:focus-visible {
-    outline: 2px solid hsl(var(--ring));
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.8), 0 0 0 4px hsl(var(--ring));
   }
 
   ${({ $variant }) => buttonVariants[$variant] || buttonVariants.default}
@@ -110,3 +117,4 @@ const Button = ({ variant = "default", size = "default", children, ...props }) =
 };
 
 export default Button;
+

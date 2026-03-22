@@ -30,8 +30,14 @@ const TrainingCategory = () => {
           <article key={scam.id} className="training-card scenario-card">
             <div className="training-card-head">
               <div className="training-card-icon">{category.icon}</div>
-              <span className="training-tag">{String(scam.type || "scenario").toUpperCase()}</span>
+              <div className="training-card-meta">
+                <span className="training-tag">{String(scam.type || "scenario").toUpperCase()}</span>
+                <span className={`training-difficulty training-difficulty-${String(category.difficulty || "medium").toLowerCase()}`}>
+                  {category.difficulty || "Medium"}
+                </span>
+              </div>
             </div>
+            <p className="training-kicker">Mission Scenario</p>
             <h4>{scam.title}</h4>
             <p className="scenario-preview">{previewText(scam.mockBody)}</p>
             <div className="scenario-actions">
@@ -47,3 +53,4 @@ const TrainingCategory = () => {
 };
 
 export default TrainingCategory;
+

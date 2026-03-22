@@ -48,7 +48,7 @@
   max-width: 1240px;
   margin: 0 auto 1.35rem;
   padding: 0.85rem 1rem;
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   border-radius: 16px;
   background: hsl(var(--card) / 0.88);
   backdrop-filter: blur(10px);
@@ -73,7 +73,7 @@
   display: grid;
   place-items: center;
   background: linear-gradient(145deg, hsl(var(--muted)), hsl(var(--background)));
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   box-shadow: inset 0 1px 1px hsl(var(--foreground) / 0.04);
 }
 
@@ -103,7 +103,7 @@
   text-decoration: none;
   padding: 0.44rem 0.78rem;
   border-radius: 999px;
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   background: hsl(var(--muted) / 0.25);
   font-size: 0.9rem;
   transition: all 0.2s ease;
@@ -121,7 +121,7 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 1.4rem;
+  gap: 1.5rem;
 }
 
 .training-title-bar {
@@ -174,11 +174,11 @@
 .feedback-card,
 .analysis-card,
 .stat-card {
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   border-radius: 16px;
-  background: hsl(var(--card) / 0.96);
+  background: linear-gradient(160deg, var(--card-bg), rgba(255, 255, 255, 0.02));
   backdrop-filter: blur(10px);
-  box-shadow: 0 10px 28px hsl(var(--foreground) / 0.05);
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.3);
 }
 
 .training-hero-card {
@@ -234,7 +234,7 @@
   cursor: pointer;
   text-decoration: none;
   font-size: 0.92rem;
-  transition: transform 0.16s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .training-cta {
@@ -247,7 +247,7 @@
 }
 
 .training-ghost {
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   color: hsl(var(--foreground));
   background: hsl(var(--muted) / 0.75);
   padding: 0.65rem 1rem;
@@ -259,7 +259,7 @@
 .option-btn:hover,
 .history-item:hover,
 .difficulty-btn:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px);
 }
 
 .training-cta:hover {
@@ -269,21 +269,37 @@
 .training-grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 1.15rem;
+  gap: 1.5rem;
 }
 
 .training-card {
   grid-column: span 3;
-  padding: 1.1rem;
+  padding: 1.25rem;
   text-decoration: none;
   color: hsl(var(--foreground));
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.training-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 15% 20%, rgba(59, 130, 246, 0.16), transparent 55%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
 }
 
 .training-card:hover {
-  transform: translateY(-3px);
-  border-color: hsl(var(--primary) / 0.35);
-  box-shadow: 0 14px 26px hsl(var(--foreground) / 0.09);
+  transform: translateY(-4px);
+  border-color: hsl(var(--primary) / 0.5);
+  box-shadow: 0 18px 34px rgba(59, 130, 246, 0.2);
+}
+
+.training-card:hover::before {
+  opacity: 1;
 }
 
 .training-card-head {
@@ -293,8 +309,24 @@
   gap: 0.6rem;
 }
 
+.training-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .training-card-icon {
   font-size: 1.45rem;
+}
+
+.training-kicker {
+  margin: 0.7rem 0 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
 }
 
 .training-tag {
@@ -303,11 +335,41 @@
   border-radius: 999px;
   padding: 0.2rem 0.6rem;
   background: hsl(var(--muted));
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   color: hsl(var(--muted-foreground));
   font-size: 0.68rem;
   letter-spacing: 0.06em;
   font-weight: 700;
+}
+
+.training-difficulty {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.2rem 0.62rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.training-difficulty-low {
+  border-color: hsl(142 71% 45% / 0.3);
+  background: hsl(142 71% 45% / 0.2);
+  color: hsl(142 71% 65%);
+}
+
+.training-difficulty-medium {
+  border-color: hsl(38 92% 50% / 0.3);
+  background: hsl(38 92% 50% / 0.2);
+  color: hsl(38 92% 75%);
+}
+
+.training-difficulty-high,
+.training-difficulty-critical {
+  border-color: hsl(var(--destructive) / 0.35);
+  background: hsl(var(--destructive) / 0.2);
+  color: hsl(var(--destructive));
 }
 
 .training-card h4 {
@@ -352,7 +414,7 @@
   padding: 0.95rem 1rem;
   border-radius: 12px;
   background: hsl(var(--muted) / 0.3);
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   color: hsl(var(--foreground));
   line-height: 1.6;
 }
@@ -437,7 +499,7 @@
 }
 
 .control-group select {
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   border-radius: 10px;
   background: hsl(var(--muted));
   color: hsl(var(--foreground));
@@ -531,7 +593,7 @@
   text-align: left;
   margin-top: 0.55rem;
   padding: 0.72rem 0.74rem;
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   background: hsl(var(--muted) / 0.3);
   color: hsl(var(--foreground));
 }
@@ -555,7 +617,7 @@
 }
 
 .difficulty-btn {
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   padding: 0.75rem 1rem;
   background: hsl(var(--muted));
   color: hsl(var(--foreground));
@@ -571,7 +633,7 @@
 }
 
 .game-stats span {
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   background: hsl(var(--muted) / 0.35);
   border-radius: 999px;
   padding: 0.26rem 0.62rem;
@@ -587,7 +649,7 @@
 
 .scenario-block pre {
   white-space: pre-wrap;
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   border-radius: 12px;
   background: hsl(var(--muted) / 0.3);
   color: hsl(var(--foreground));
@@ -608,7 +670,7 @@
   padding: 0.78rem 0.82rem;
   background: hsl(var(--muted));
   color: hsl(var(--foreground));
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
 }
 
 .results-card {
@@ -623,7 +685,7 @@
 }
 
 .results-grid article {
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   border-radius: 12px;
   padding: 0.7rem;
   background: hsl(var(--muted) / 0.3);
@@ -707,3 +769,4 @@
     min-height: auto;
   }
 }
+

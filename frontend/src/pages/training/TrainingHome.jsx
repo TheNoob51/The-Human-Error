@@ -35,7 +35,13 @@ const TrainingHome = () => {
       <section className="training-grid">
         {trainingCategories.map((category) => (
           <Link className="training-card" key={category.id} to={`/training/${category.id}`}>
-            <div className="training-card-icon">{category.icon}</div>
+            <div className="training-card-head">
+              <div className="training-card-icon">{category.icon}</div>
+              <span className={`training-difficulty training-difficulty-${String(category.difficulty || "medium").toLowerCase()}`}>
+                {category.difficulty || "Medium"}
+              </span>
+            </div>
+            <p className="training-kicker">Mission Track</p>
             <h4>{category.title}</h4>
             <p>{category.description}</p>
           </Link>
@@ -46,3 +52,4 @@ const TrainingHome = () => {
 };
 
 export default TrainingHome;
+

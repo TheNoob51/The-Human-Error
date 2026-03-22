@@ -6,7 +6,7 @@ const StyledInput = styled.input`
   height: 2.5rem; /* 10 (40px) */
   width: 100%;
   border-radius: var(--radius);
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   background-color: hsl(var(--background));
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem; /* 14px */
@@ -36,3 +36,4 @@ const Input = forwardRef((props, ref) => {
 Input.displayName = "Input";
 
 export default Input;
+

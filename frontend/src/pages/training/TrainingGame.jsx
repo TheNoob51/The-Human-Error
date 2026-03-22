@@ -174,3 +174,4 @@ const TrainingGame = () => {
 };
 
 export default TrainingGame;
+

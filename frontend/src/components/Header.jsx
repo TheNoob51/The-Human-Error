@@ -9,7 +9,7 @@ const HeaderContainer = styled.header`
   top: 0;
   z-index: 50;
   width: 100%;
-  border-bottom: 1px solid hsl(var(--border));
+  border-bottom: 1px solid hsl(var(--border-hsl));
   background-color: hsl(var(--background) / 0.8);
   backdrop-filter: blur(8px);
   
@@ -38,10 +38,10 @@ const LogoSection = styled.div`
   color: hsl(var(--foreground));
   
   img {
-    height: 2rem;
+    height: 3rem;
     width: auto;
     object-fit: contain;
-    filter: invert(1);
+    // filter: invert(1);
     /* In light mode, invert(0) might be better if logo is dark, 
        assuming logo is white and background is dark? 
        Actually, standard shadcn is light mode default. 
@@ -120,3 +120,4 @@ const Header = ({ user }) => {
 
 
 export default Header;
+

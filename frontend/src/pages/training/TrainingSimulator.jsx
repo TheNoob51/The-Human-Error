@@ -116,3 +116,4 @@ const TrainingSimulator = () => {
 };
 
 export default TrainingSimulator;
+
