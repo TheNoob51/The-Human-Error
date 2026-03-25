@@ -164,6 +164,9 @@
 
 .training-hero-card,
 .training-card,
+.training-insight-card,
+.training-flow-card,
+.training-category-overview,
 .sim-panel,
 .generator-controls,
 .threat-card,
@@ -224,6 +227,73 @@
   min-width: 220px;
 }
 
+.training-insight-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.training-insight-card {
+  padding: 1rem 1.05rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.training-insight-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 8% 12%, hsl(var(--primary) / 0.16), transparent 54%);
+  pointer-events: none;
+}
+
+.training-insight-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.training-insight-label {
+  margin: 0;
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+  font-weight: 700;
+}
+
+.training-insight-card h4 {
+  margin: 0.45rem 0 0.25rem;
+  font-size: clamp(1.35rem, 1.1rem + 0.8vw, 1.8rem);
+  color: hsl(var(--foreground));
+}
+
+.training-insight-card p {
+  margin: 0;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.5;
+}
+
+.training-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.training-flow-card {
+  padding: 1rem 1.05rem;
+}
+
+.training-flow-card h4 {
+  margin: 0.55rem 0 0.35rem;
+  color: hsl(var(--foreground));
+}
+
+.training-flow-card p {
+  margin: 0;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.55;
+}
+
 .training-cta,
 .training-ghost,
 .choice,
@@ -270,6 +340,10 @@
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 1.5rem;
+}
+
+.training-grid-three .training-card {
+  grid-column: span 4;
 }
 
 .training-card {
@@ -396,12 +470,67 @@
 .scenario-card {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.9rem;
   min-height: 300px;
+  padding: 1.35rem;
+}
+
+.training-category-overview {
+  padding: 1.1rem 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.training-category-overview h3 {
+  margin: 0.3rem 0 0.35rem;
+  color: hsl(var(--foreground));
+}
+
+.training-category-overview p {
+  margin: 0;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.6;
+  max-width: 68ch;
+}
+
+.training-category-metrics {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.scenario-inline-meta {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.scenario-inline-meta span {
+  border: 1px solid hsl(var(--border-hsl));
+  border-radius: 999px;
+  padding: 0.22rem 0.58rem;
+  background: hsl(var(--muted) / 0.3);
+  color: hsl(var(--muted-foreground));
+  font-size: 0.76rem;
 }
 
 .scenario-actions {
   margin-top: auto;
+  padding-top: 0.2rem;
+}
+
+.training-scenarios-grid {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1.35rem;
+}
+
+.training-scenarios-grid .training-card {
+  grid-column: span 4;
 }
 
 .sim-panel {
@@ -729,6 +858,19 @@
     grid-column: span 6;
   }
 
+  .training-insight-row,
+  .training-flow-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .training-grid-three .training-card {
+    grid-column: span 6;
+  }
+
+  .training-scenarios-grid .training-card {
+    grid-column: span 6;
+  }
+
   .training-hero-card {
     grid-template-columns: 1fr;
   }
@@ -756,7 +898,20 @@
     grid-template-columns: 1fr;
   }
 
+  .training-insight-row,
+  .training-flow-grid {
+    grid-template-columns: 1fr;
+  }
+
   .training-card {
+    grid-column: auto;
+  }
+
+  .training-grid-three .training-card {
+    grid-column: auto;
+  }
+
+  .training-scenarios-grid .training-card {
     grid-column: auto;
   }
 

@@ -1,51 +1,54 @@
 import { Link } from "react-router-dom";
 import TrainingLayout from "../../training/components/TrainingLayout";
-import { trainingCategories } from "../../training/trainingCatalog";
 
 const TrainingHome = () => {
   return (
     <TrainingLayout
-      title="Training Directory"
-      subtitle="Select a category to launch immersive simulations and decision-driven practice."
+      title="Training Overview"
+      subtitle="Quick start hub for practice modules, scenario paths, and AI-generated drills."
     >
       <section className="training-hero-card">
         <div>
-          <p className="training-pill">Live Practice Mode</p>
-          <h3>Think like an attacker, respond like a defender.</h3>
+          <p className="training-pill">Quick Intro</p>
+          <h3>Build safer instincts in minutes.</h3>
           <p>
-            Explore realistic social-engineering simulations, run AI-generated threat drills,
-            and sharpen your security judgment with instant feedback.
+            Start with guided scenarios, sharpen decision-making, and test your response style
+            with practical simulations.
           </p>
         </div>
         <div className="training-hero-actions">
-          <Link className="training-cta" to="/training/game">
-            Start Game
+          <Link className="training-cta" to="/training/paths">
+            Go to Training Paths
           </Link>
-          <Link className="training-ghost" to="/training/threat-generator">
-            Open Threat Generator
+          <Link className="training-ghost" to="/training/game">
+            Open Training Game
           </Link>
         </div>
       </section>
 
-      <section className="training-section-head" aria-label="Category overview">
-        <h3>Training Paths</h3>
-        <p>Choose a track to start focused practice with realistic lures and guided feedback.</p>
+      <section className="training-section-head" aria-label="Training destinations">
+        <h3>Where do you want to go?</h3>
+        <p>Pick one module and continue.</p>
       </section>
 
-      <section className="training-grid">
-        {trainingCategories.map((category) => (
-          <Link className="training-card" key={category.id} to={`/training/${category.id}`}>
-            <div className="training-card-head">
-              <div className="training-card-icon">{category.icon}</div>
-              <span className={`training-difficulty training-difficulty-${String(category.difficulty || "medium").toLowerCase()}`}>
-                {category.difficulty || "Medium"}
-              </span>
-            </div>
-            <p className="training-kicker">Mission Track</p>
-            <h4>{category.title}</h4>
-            <p>{category.description}</p>
-          </Link>
-        ))}
+      <section className="training-grid training-grid-three">
+        <Link className="training-card" to="/training/paths">
+          <p className="training-kicker">Primary</p>
+          <h4>Training Paths</h4>
+          <p>Browse category-based scenarios and launch simulation drills.</p>
+        </Link>
+
+        <Link className="training-card" to="/training/game">
+          <p className="training-kicker">Challenge</p>
+          <h4>Training Game</h4>
+          <p>Play randomized rounds with scoring, streaks, and feedback.</p>
+        </Link>
+
+        <Link className="training-card" to="/training/threat-generator">
+          <p className="training-kicker">AI Module</p>
+          <h4>Threat Generator</h4>
+          <p>Generate fresh threat cases to test awareness and response plans.</p>
+        </Link>
       </section>
     </TrainingLayout>
   );

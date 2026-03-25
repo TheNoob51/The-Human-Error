@@ -6,6 +6,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import TurnSimulation from "./pages/TurnSimulation";
 import TrainingHome from "./pages/training/TrainingHome";
+import TrainingPaths from "./pages/training/TrainingPaths";
 import TrainingCategory from "./pages/training/TrainingCategory";
 import TrainingSimulator from "./pages/training/TrainingSimulator";
 import TrainingThreatGenerator from "./pages/training/TrainingThreatGenerator";
@@ -41,6 +42,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <TrainingHome />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/training/paths"
+            element={
+              <ProtectedRoute>
+                <TrainingPaths />
               </ProtectedRoute>
             }
           />

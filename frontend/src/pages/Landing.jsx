@@ -1,9 +1,21 @@
 import styled from "styled-components";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { Brain, MousePointerClick, ShieldCheck } from "lucide-react";
+import {
+    AlertTriangle,
+    ArrowRight,
+    BarChart3,
+    Brain,
+    CheckCircle2,
+    Clock3,
+    Eye,
+    MousePointerClick,
+    ShieldCheck,
+    Sparkles,
+} from "lucide-react";
 import Header from "../components/Header";
 import Button from "../components/Button";
+import { useAuth } from "../context/AuthContext";
 import {
     Card,
     CardContent,
@@ -135,6 +147,15 @@ const CardsGrid = styled.div`
   }
 `;
 
+const SectionLead = styled.p`
+        max-width: 780px;
+        margin: -1.8rem auto 2.6rem;
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 1rem;
+        line-height: 1.7;
+`;
+
 const StyledCard = styled(Card)`
     position: relative;
   height: 100%;
@@ -183,6 +204,286 @@ const StyledCard = styled(Card)`
   }
 `;
 
+const InsightsSection = styled(FeaturesSection)`
+    padding-top: 1.2rem;
+`;
+
+const InsightsGrid = styled.div`
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+
+    @media (min-width: 640px) {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (min-width: 1024px) {
+        grid-template-columns: repeat(4, 1fr);
+    }
+`;
+
+const InsightCard = styled(Card)`
+    position: relative;
+    overflow: hidden;
+    border-color: rgba(148, 163, 184, 0.2);
+    background: linear-gradient(165deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.84));
+    box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.06);
+
+    &::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(160deg, rgba(59, 130, 246, 0.14), transparent 45%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    }
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 18px 34px rgba(59, 130, 246, 0.22), inset 0 0 0 1px rgba(125, 211, 252, 0.06);
+        border-color: var(--border);
+    }
+
+    &:hover::before {
+        opacity: 1;
+    }
+`;
+
+const InsightValue = styled.p`
+    margin: 0;
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #dbeafe;
+`;
+
+const InsightLabel = styled.p`
+    margin: 0.5rem 0 0;
+    color: var(--text-secondary);
+    font-size: 0.94rem;
+`;
+
+const ProcessSection = styled(FeaturesSection)`
+    padding-top: 0.4rem;
+`;
+
+const ProcessGrid = styled.div`
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+
+    @media (min-width: 768px) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+`;
+
+const ProcessCard = styled(Card)`
+    position: relative;
+    overflow: hidden;
+    min-height: 170px;
+
+    &::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(160deg, rgba(59, 130, 246, 0.14), transparent 45%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    }
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 18px 34px rgba(59, 130, 246, 0.22);
+        border-color: var(--border);
+    }
+
+    &:hover::before {
+        opacity: 1;
+    }
+
+    &::after {
+        content: "";
+        position: absolute;
+        right: -32px;
+        bottom: -42px;
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(56, 189, 248, 0.16), transparent 70%);
+        pointer-events: none;
+    }
+`;
+
+const StepNumber = styled.span`
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    background: rgba(96, 165, 250, 0.18);
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    color: #bfdbfe;
+    font-size: 0.84rem;
+    font-weight: 700;
+`;
+
+const PointsList = styled.ul`
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.9rem;
+`;
+
+const PointItem = styled.li`
+    display: flex;
+    gap: 0.65rem;
+    align-items: flex-start;
+    color: var(--text-secondary);
+    line-height: 1.55;
+
+    svg {
+        color: #7dd3fc;
+        flex-shrink: 0;
+        margin-top: 0.18rem;
+    }
+`;
+
+const FinalCtaSection = styled.section`
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 1.2rem 2rem 5rem;
+`;
+
+const FinalCtaCard = styled(Card)`
+    position: relative;
+    overflow: hidden;
+    text-align: left;
+    border-color: rgba(125, 211, 252, 0.34);
+    background:
+        radial-gradient(600px 260px at 85% 10%, rgba(56, 189, 248, 0.12), transparent 70%),
+        linear-gradient(135deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.94));
+    border-radius: calc(var(--radius) + 6px);
+    padding: clamp(1.35rem, 2.4vw, 2.2rem);
+
+    &:hover {
+        transform: none;
+        box-shadow: 0 14px 34px rgba(2, 6, 23, 0.35);
+        border-color: rgba(125, 211, 252, 0.34);
+    }
+
+    &::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(112deg, rgba(59, 130, 246, 0.16), transparent 36%, transparent 64%, rgba(125, 211, 252, 0.13));
+        opacity: 0.86;
+        pointer-events: none;
+    }
+
+    &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+            linear-gradient(rgba(147, 197, 253, 0.08) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(147, 197, 253, 0.06) 1px, transparent 1px);
+        background-size: 28px 28px;
+        mask-image: radial-gradient(circle at 82% 36%, black 10%, transparent 76%);
+        pointer-events: none;
+    }
+
+    > * {
+        position: relative;
+        z-index: 1;
+    }
+`;
+
+const FinalCtaInner = styled.div`
+    display: grid;
+    gap: clamp(1.25rem, 2vw, 2rem);
+    grid-template-columns: 1fr;
+
+    @media (min-width: 920px) {
+        grid-template-columns: 1.35fr 1fr;
+        align-items: start;
+    }
+`;
+
+const FinalCtaColumn = styled.div`
+    display: grid;
+    gap: 1rem;
+`;
+
+const FinalCtaKicker = styled.p`
+    margin: 0 0 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid rgba(125, 211, 252, 0.34);
+    border-radius: 999px;
+    padding: 0.36rem 0.8rem;
+    color: #c7d2fe;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+`;
+
+const FinalCtaTitle = styled.h3`
+    margin: 0;
+    font-size: clamp(1.6rem, 3vw, 2rem);
+    letter-spacing: -0.02em;
+`;
+
+const FinalCtaText = styled.p`
+    margin: 0.75rem 0 0;
+    max-width: 720px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+`;
+
+const CtaMetaRow = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 1.2rem;
+`;
+
+const CtaMetaChip = styled.span`
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    border-radius: 999px;
+    padding: 0.4rem 0.75rem;
+    color: #cbd5e1;
+    font-size: 0.82rem;
+    background: rgba(15, 23, 42, 0.28);
+`;
+
+const CtaActionRow = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+`;
+
+const ButtonText = styled.span`
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+`;
+
+const CtaHint = styled.p`
+    margin: 0.2rem 0 0;
+    font-size: 0.84rem;
+    color: #93c5fd;
+`;
+
 const Footer = styled.footer`
   padding: 2rem;
   text-align: center;
@@ -209,7 +510,43 @@ const staggerContainer = {
 
 const Landing = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [showBelowFold, setShowBelowFold] = useState(false);
+    const isLoggedIn = Boolean(user);
+
+    const insightStats = [
+        { value: "93%", label: "attacks start with human interaction", icon: AlertTriangle },
+        { value: "4", label: "core simulation channels in one environment", icon: Eye },
+        { value: "< 3 min", label: "average time to complete one scenario", icon: Clock3 },
+        { value: "V-score", label: "continuous risk index per participant", icon: BarChart3 },
+    ];
+
+    const processSteps = [
+        {
+            step: "01",
+            title: "Enter a realistic threat story",
+            description:
+                "Participants interact with authentic-looking emails, internal chats, prompts, and system popups that mirror daily workflow pressure.",
+        },
+        {
+            step: "02",
+            title: "Measure behavior, not just outcomes",
+            description:
+                "The platform captures hesitation, cursor movement, click paths, and verification behavior to reveal how decisions are made under stress.",
+        },
+        {
+            step: "03",
+            title: "Generate an explainable vulnerability profile",
+            description:
+                "Behavioral signals are translated into an interpretable V-score with clear strengths, blind spots, and recommended corrective actions.",
+        },
+        {
+            step: "04",
+            title: "Train again with adaptive difficulty",
+            description:
+                "Follow-up scenarios adjust complexity to reinforce weak areas, helping users build durable instincts instead of one-time awareness.",
+        },
+    ];
 
     useEffect(() => {
         if (showBelowFold) return;
@@ -286,6 +623,10 @@ const Landing = () => {
                         {/* How It Works */}
                         <FeaturesSection>
                             <SectionTitle>How It Works</SectionTitle>
+                            <SectionLead>
+                                Human error is rarely random. It follows patterns that can be measured,
+                                explained, and improved through repeated simulation and feedback.
+                            </SectionLead>
                             <CardsGrid as={motion.div} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer}>
 
                                 {/* Card 1 */}
@@ -338,6 +679,112 @@ const Landing = () => {
 
                             </CardsGrid>
                         </FeaturesSection>
+
+                        <InsightsSection>
+                            <SectionTitle>Why This Matters</SectionTitle>
+                            <InsightsGrid as={motion.div} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer}>
+                                {insightStats.map(({ value, label, icon: Icon }) => (
+                                    <motion.div variants={fadeInUp} key={label}>
+                                        <InsightCard>
+                                            <CardHeader>
+                                                <Icon size={22} color="hsl(var(--primary))" />
+                                                <InsightValue>{value}</InsightValue>
+                                                <InsightLabel>{label}</InsightLabel>
+                                            </CardHeader>
+                                        </InsightCard>
+                                    </motion.div>
+                                ))}
+                            </InsightsGrid>
+                        </InsightsSection>
+
+                        <ProcessSection>
+                            <SectionTitle>Simulation Journey</SectionTitle>
+                            <ProcessGrid as={motion.div} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer}>
+                                {processSteps.map((item) => (
+                                    <motion.div variants={fadeInUp} key={item.step}>
+                                        <ProcessCard>
+                                            <CardHeader>
+                                                <StepNumber>{item.step}</StepNumber>
+                                                <CardTitle>{item.title}</CardTitle>
+                                                <CardDescription>{item.description}</CardDescription>
+                                            </CardHeader>
+                                        </ProcessCard>
+                                    </motion.div>
+                                ))}
+                            </ProcessGrid>
+                        </ProcessSection>
+
+                        <FinalCtaSection>
+                            <FinalCtaCard as={motion.div} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp}>
+                                <FinalCtaInner>
+                                    <FinalCtaColumn>
+                                        <FinalCtaKicker>
+                                            <Sparkles size={14} />
+                                            Behavior-first security training
+                                        </FinalCtaKicker>
+                                        <FinalCtaTitle>What You Get Beyond a Typical Awareness Quiz</FinalCtaTitle>
+                                        <FinalCtaText>
+                                            The Human Error combines realistic simulation, behavioral telemetry,
+                                            and explainable analytics to make security training measurable,
+                                            repeatable, and personalized for every participant.
+                                        </FinalCtaText>
+
+                                        <CtaMetaRow>
+                                            <CtaMetaChip>
+                                                <BarChart3 size={14} />
+                                                Explainable V-score analytics
+                                            </CtaMetaChip>
+                                            <CtaMetaChip>
+                                                <Eye size={14} />
+                                                Real-time decision telemetry
+                                            </CtaMetaChip>
+                                            <CtaMetaChip>
+                                                <ShieldCheck size={14} />
+                                                Adaptive resilience practice
+                                            </CtaMetaChip>
+                                        </CtaMetaRow>
+                                    </FinalCtaColumn>
+
+                                    <FinalCtaColumn>
+                                        <CardTitle>What You Actually Build</CardTitle>
+                                        <CardDescription>
+                                            Outcomes focus on practical habits your team can apply the same day.
+                                        </CardDescription>
+                                        <PointsList>
+                                            <PointItem>
+                                                <CheckCircle2 size={18} />
+                                                Scenario-based learning mapped to real workplace attacks.
+                                            </PointItem>
+                                            <PointItem>
+                                                <CheckCircle2 size={18} />
+                                                Actionable V-score tracking for individuals and teams.
+                                            </PointItem>
+                                            <PointItem>
+                                                <CheckCircle2 size={18} />
+                                                Immediate practice loops to convert insight into safer behavior.
+                                            </PointItem>
+                                        </PointsList>
+
+                                        <CtaActionRow>
+                                            <Button size="lg" onClick={() => navigate(isLoggedIn ? '/dashboard' : '/auth')}>
+                                                <ButtonText>
+                                                    {isLoggedIn ? "Go to Dashboard" : "Launch Full Experience"}
+                                                    <ArrowRight size={16} />
+                                                </ButtonText>
+                                            </Button>
+                                            <Button variant="outline" size="lg" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+                                                Revisit Overview
+                                            </Button>
+                                        </CtaActionRow>
+                                        <CtaHint>
+                                            {isLoggedIn
+                                                ? "Jump back in and continue your progress."
+                                                : "No signup friction. Start your first scenario in minutes."}
+                                        </CtaHint>
+                                    </FinalCtaColumn>
+                                </FinalCtaInner>
+                            </FinalCtaCard>
+                        </FinalCtaSection>
                     </motion.div>
                 )}
             </MainContent>

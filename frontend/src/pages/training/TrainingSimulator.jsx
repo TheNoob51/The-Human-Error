@@ -69,8 +69,8 @@ const TrainingSimulator = () => {
               <button className="training-cta" onClick={() => setStep("analysis")}>
                 Analyze Threat
               </button>
-              <Link className="training-ghost" to="/training">
-                Back to Directory
+              <Link className="training-ghost" to="/training/paths">
+                Back to Training Paths
               </Link>
             </div>
           </>
@@ -95,8 +95,8 @@ const TrainingSimulator = () => {
               <p>{scam.edu.defense}</p>
             </div>
             <div className="sim-choices">
-              <Link className="training-cta" to="/training">
-                Back to Directory
+              <Link className="training-cta" to="/training/paths">
+                Back to Training Paths
               </Link>
               <button
                 className="training-ghost"
