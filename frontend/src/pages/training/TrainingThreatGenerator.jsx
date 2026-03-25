@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import TrainingLayout from "../../training/components/TrainingLayout";
+import { useAuth } from "../../context/AuthContext";
+import {
+  getUserThreatBriefings,
+  saveThreatBriefing,
+  updateThreatBriefing,
+} from "../../lib/firestoreService";
 
 const severityClass = {
   Low: "sev-low",
@@ -7,6 +13,8 @@ const severityClass = {
   High: "sev-high",
   Critical: "sev-critical",
 };
+
+const riskOptions = ["Low", "Medium", "High", "Critical"];
 
 const API_BASE_URL = "http://localhost:5000/api";
 
@@ -34,12 +42,22 @@ const deriveSignals = (threat) => {
 };
 
 const TrainingThreatGenerator = () => {
+  const { user } = useAuth();
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedRiskLevel, setSelectedRiskLevel] = useState("");
   const [currentThreat, setCurrentThreat] = useState(null);
   const [history, setHistory] = useState([]);
   const [historyQuery, setHistoryQuery] = useState("");
-  const [analystNotes, setAnalystNotes] = useState("");
+  const [cloudLoading, setCloudLoading] = useState(false);
+  const [savingToCloud, setSavingToCloud] = useState(false);
+  const [updatingCloudThreat, setUpdatingCloudThreat] = useState(false);
+  const [cloudNotice, setCloudNotice] = useState("");
+  const [improveDraft, setImproveDraft] = useState({
+    title: "",
+    description: "",
+    preventionText: "",
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -58,6 +76,34 @@ const TrainingThreatGenerator = () => {
     fetchCategories();
   }, []);
 
+  useEffect(() => {
+    const loadCloudThreats = async () => {
+      if (!user?.uid) {
+        setHistory([]);
+        return;
+      }
+
+      setCloudLoading(true);
+      setCloudNotice("");
+
+      try {
+        const cloudThreats = await getUserThreatBriefings(user.uid);
+        const mapped = cloudThreats.map((threat) => ({
+          ...threat,
+          cloudId: threat.id,
+          savedInCloud: true,
+        }));
+        setHistory(mapped);
+      } catch {
+        setCloudNotice("Unable to load saved threats right now.");
+      } finally {
+        setCloudLoading(false);
+      }
+    };
+
+    loadCloudThreats();
+  }, [user?.uid]);
+
   const stats = useMemo(() => {
     return {
       generated: history.length,
@@ -71,9 +117,13 @@ const TrainingThreatGenerator = () => {
     setError("");
 
     try {
+      const params = new URLSearchParams();
+      if (selectedCategory) params.set("category", selectedCategory);
+      if (selectedRiskLevel) params.set("riskLevel", selectedRiskLevel);
+
       const endpoint = selectedCategory
-        ? `${API_BASE_URL}/threats/generate?category=${encodeURIComponent(selectedCategory)}`
-        : `${API_BASE_URL}/threats/random`;
+        ? `${API_BASE_URL}/threats/generate?${params.toString()}`
+        : `${API_BASE_URL}/threats/random${params.toString() ? `?${params.toString()}` : ""}`;
 
       const res = await fetch(endpoint);
       if (!res.ok) throw new Error("Failed to generate threat");
@@ -82,6 +132,7 @@ const TrainingThreatGenerator = () => {
       const enrichedThreat = {
         ...data,
         generatedAt: new Date().toISOString(),
+        savedInCloud: false,
       };
 
       setCurrentThreat(enrichedThreat);
@@ -105,21 +156,103 @@ const TrainingThreatGenerator = () => {
 
   const activeSignals = useMemo(() => deriveSignals(currentThreat || {}), [currentThreat]);
 
+  useEffect(() => {
+    if (!currentThreat) {
+      setImproveDraft({ title: "", description: "", preventionText: "" });
+      return;
+    }
+
+    setImproveDraft({
+      title: currentThreat.title || "",
+      description: currentThreat.description || "",
+      preventionText: (currentThreat.prevention || []).join("\n"),
+    });
+  }, [currentThreat]);
+
+  const normalizePreventionText = (value) => {
+    return value
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  };
+
+  const handleSaveCurrentThreat = async () => {
+    if (!user?.uid || !currentThreat) {
+      setCloudNotice("Sign in and generate a threat before saving.");
+      return;
+    }
+
+    if (currentThreat.savedInCloud && currentThreat.cloudId) {
+      setCloudNotice("This threat is already saved in cloud.");
+      return;
+    }
+
+    setSavingToCloud(true);
+    setCloudNotice("");
+
+    try {
+      const newId = await saveThreatBriefing(user.uid, currentThreat);
+      const savedThreat = {
+        ...currentThreat,
+        cloudId: newId,
+        savedInCloud: true,
+      };
+
+      setCurrentThreat(savedThreat);
+      setHistory((prev) => {
+        const next = prev.map((item) => (item === currentThreat ? savedThreat : item));
+        return next;
+      });
+      setCloudNotice("Threat saved to cloud.");
+    } catch {
+      setCloudNotice("Could not save threat to cloud.");
+    } finally {
+      setSavingToCloud(false);
+    }
+  };
+
+  const handleImproveAndSave = async () => {
+    if (!user?.uid || !currentThreat?.cloudId) {
+      setCloudNotice("Save the threat first, then improve it.");
+      return;
+    }
+
+    const updatedThreat = {
+      ...currentThreat,
+      title: improveDraft.title.trim() || currentThreat.title,
+      description: improveDraft.description.trim() || currentThreat.description,
+      prevention: normalizePreventionText(improveDraft.preventionText),
+      updatedAtLocal: new Date().toISOString(),
+      savedInCloud: true,
+    };
+
+    setUpdatingCloudThreat(true);
+    setCloudNotice("");
+
+    try {
+      await updateThreatBriefing(user.uid, currentThreat.cloudId, {
+        title: updatedThreat.title,
+        description: updatedThreat.description,
+        prevention: updatedThreat.prevention,
+      });
+
+      setCurrentThreat(updatedThreat);
+      setHistory((prev) => prev.map((item) => (
+        item.cloudId === currentThreat.cloudId ? { ...item, ...updatedThreat } : item
+      )));
+      setCloudNotice("Threat improvements saved to cloud.");
+    } catch {
+      setCloudNotice("Could not update the cloud threat.");
+    } finally {
+      setUpdatingCloudThreat(false);
+    }
+  };
+
   return (
     <TrainingLayout
       title="AI Threat Generator"
-      subtitle="Create realistic threat briefings with AI, inspect patterns, and build faster response instincts."
+      subtitle="Generate realistic threat briefings and review key risk patterns in a focused workspace."
     >
-      <section className="generator-hero-card">
-        <div>
-          <p className="generator-kicker">Threat Lab</p>
-          <h3>Generate scenario-grade attacks for tabletop exercises</h3>
-          <p>
-            Pick a category, generate a threat, and analyze risk signals before you run response drills.
-          </p>
-        </div>
-        <div className="generator-hero-pill">Model: Live API</div>
-      </section>
 
       <section className="generator-controls generator-controls-redesign">
         <div className="control-group">
@@ -137,14 +270,17 @@ const TrainingThreatGenerator = () => {
           </select>
         </div>
 
-        <div className="control-group control-group-wide">
-          <label>Analyst Notes</label>
-          <textarea
-            value={analystNotes}
-            onChange={(event) => setAnalystNotes(event.target.value)}
-            rows={2}
-            placeholder="Optional context for your team: high-value assets, active incidents, or constraints..."
-          />
+        <div className="control-group">
+          <label>Threat Level</label>
+          <select
+            value={selectedRiskLevel}
+            onChange={(event) => setSelectedRiskLevel(event.target.value)}
+          >
+            <option value="">Any Level</option>
+            {riskOptions.map((level) => (
+              <option value={level} key={level}>{level}</option>
+            ))}
+          </select>
         </div>
 
         <div className="generator-actions">
@@ -153,16 +289,25 @@ const TrainingThreatGenerator = () => {
           </button>
           <button
             className="training-ghost"
+            onClick={handleSaveCurrentThreat}
+            disabled={!currentThreat || savingToCloud || !user?.uid}
+          >
+            {savingToCloud ? "Saving..." : "Save To Cloud"}
+          </button>
+          <button
+            className="training-ghost"
             onClick={() => {
               setHistory([]);
               setCurrentThreat(null);
             }}
-            disabled={history.length === 0 && !currentThreat}
+            disabled={history.length === 0 && !currentThreat && !cloudLoading}
           >
             Clear Session
           </button>
         </div>
       </section>
+
+      {cloudNotice ? <p className="cloud-note">{cloudNotice}</p> : null}
 
       <section className="stats-row">
         <article className="stat-card">
@@ -197,6 +342,7 @@ const TrainingThreatGenerator = () => {
                 </span>
               </div>
               <p className="threat-category">{currentThreat.categoryTitle || currentThreat.category}</p>
+              {currentThreat.savedInCloud ? <p className="cloud-tag">Saved In Cloud</p> : null}
 
               <section className="dossier-block">
                 <h4>Threat Summary</h4>
@@ -221,12 +367,36 @@ const TrainingThreatGenerator = () => {
                 </ul>
               </section>
 
-              {analystNotes.trim() ? (
-                <section className="dossier-block analyst-notes">
-                  <h4>Analyst Notes</h4>
-                  <p>{analystNotes}</p>
-                </section>
-              ) : null}
+              <section className="dossier-block improve-block">
+                <h4>Improve And Save</h4>
+                <input
+                  className="improve-input"
+                  value={improveDraft.title}
+                  onChange={(event) => setImproveDraft((prev) => ({ ...prev, title: event.target.value }))}
+                  placeholder="Improve title"
+                />
+                <textarea
+                  className="improve-textarea"
+                  value={improveDraft.description}
+                  onChange={(event) => setImproveDraft((prev) => ({ ...prev, description: event.target.value }))}
+                  rows={4}
+                  placeholder="Improve description"
+                />
+                <textarea
+                  className="improve-textarea"
+                  value={improveDraft.preventionText}
+                  onChange={(event) => setImproveDraft((prev) => ({ ...prev, preventionText: event.target.value }))}
+                  rows={4}
+                  placeholder="One prevention item per line"
+                />
+                <button
+                  className="training-cta"
+                  onClick={handleImproveAndSave}
+                  disabled={updatingCloudThreat || !currentThreat.savedInCloud || !user?.uid}
+                >
+                  {updatingCloudThreat ? "Saving Improvements..." : "Save Improvements"}
+                </button>
+              </section>
             </>
           )}
         </article>
@@ -244,6 +414,8 @@ const TrainingThreatGenerator = () => {
             onChange={(event) => setHistoryQuery(event.target.value)}
             placeholder="Search title, category, severity..."
           />
+
+          {cloudLoading ? <p className="history-empty">Loading cloud threats...</p> : null}
 
           {filteredHistory.length === 0 ? <p className="history-empty">No matching history.</p> : null}
 

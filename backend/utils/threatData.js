@@ -1485,12 +1485,22 @@ const threatCategories = {
  * @param {string} category - Category name
  * @returns {Object|null} Random threat or null if category not found
  */
-function getRandomThreatFromCategory(category) {
+function getRandomThreatFromCategory(category, riskLevel = null) {
   if (!threatCategories[category] || threatCategories[category].examples.length === 0) {
     return null;
   }
 
-  const examples = threatCategories[category].examples;
+  const normalizedRisk = typeof riskLevel === "string" ? riskLevel.trim().toLowerCase() : null;
+  const examples = normalizedRisk
+    ? threatCategories[category].examples.filter(
+      (item) => (item.riskLevel || "").toLowerCase() === normalizedRisk
+    )
+    : threatCategories[category].examples;
+
+  if (examples.length === 0) {
+    return null;
+  }
+
   const randomExample = examples[Math.floor(Math.random() * examples.length)];
 
   return {
@@ -1518,10 +1528,27 @@ function getAllCategories() {
  * Get random threat from any category
  * @returns {Object} Random threat from random category
  */
-function getRandomThreat() {
+function getRandomThreat(riskLevel = null) {
   const categories = Object.keys(threatCategories);
-  const randomCategory = categories[Math.floor(Math.random() * categories.length)];
-  return getRandomThreatFromCategory(randomCategory);
+  const normalizedRisk = typeof riskLevel === "string" ? riskLevel.trim().toLowerCase() : null;
+
+  if (!normalizedRisk) {
+    const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+    return getRandomThreatFromCategory(randomCategory);
+  }
+
+  const eligibleCategories = categories.filter((category) => (
+    threatCategories[category].examples.some(
+      (item) => (item.riskLevel || "").toLowerCase() === normalizedRisk
+    )
+  ));
+
+  if (eligibleCategories.length === 0) {
+    return null;
+  }
+
+  const randomCategory = eligibleCategories[Math.floor(Math.random() * eligibleCategories.length)];
+  return getRandomThreatFromCategory(randomCategory, riskLevel);
 }
 
 module.exports = {

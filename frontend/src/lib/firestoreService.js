@@ -7,6 +7,7 @@ import {
     doc,
     getDoc,
     setDoc,
+    updateDoc,
     serverTimestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
@@ -14,6 +15,7 @@ import { db } from "./firebase";
 // ─── Collection References ───
 const SESSIONS_COLLECTION = "simulation_sessions";
 const USERS_COLLECTION = "users";
+const THREATS_COLLECTION = "threat_briefings";
 
 // ─── User Profile ───
 
@@ -153,4 +155,79 @@ export const getUserSimulations = async (uid) => {
     });
 
     return results;
+};
+
+// ─── Threat Briefings ───
+
+export const saveThreatBriefing = async (uid, threatData) => {
+    if (!uid || !threatData) return null;
+
+    const payload = {
+        uid,
+        title: threatData.title || "Untitled Threat",
+        description: threatData.description || "",
+        riskLevel: threatData.riskLevel || "Medium",
+        category: threatData.category || "unknown",
+        categoryTitle: threatData.categoryTitle || threatData.category || "Unknown",
+        prevention: Array.isArray(threatData.prevention) ? threatData.prevention : [],
+        source: threatData.source || "generator",
+        generatedAt: threatData.generatedAt || new Date().toISOString(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+    };
+
+    const docRef = await addDoc(collection(db, THREATS_COLLECTION), payload);
+    return docRef.id;
+};
+
+export const getUserThreatBriefings = async (uid) => {
+    if (!uid) return [];
+
+    const q = query(
+        collection(db, THREATS_COLLECTION),
+        where("uid", "==", uid)
+    );
+
+    const snapshot = await getDocs(q);
+    const results = snapshot.docs.map((entry) => ({
+        id: entry.id,
+        ...entry.data(),
+    }));
+
+    results.sort((a, b) => {
+        const timeA = a.updatedAt?.toMillis?.() || a.createdAt?.toMillis?.() || new Date(a.generatedAt).getTime() || 0;
+        const timeB = b.updatedAt?.toMillis?.() || b.createdAt?.toMillis?.() || new Date(b.generatedAt).getTime() || 0;
+        return timeB - timeA;
+    });
+
+    return results;
+};
+
+export const updateThreatBriefing = async (uid, threatId, updates) => {
+    if (!uid || !threatId || !updates) return null;
+
+    const threatRef = doc(db, THREATS_COLLECTION, threatId);
+    const snap = await getDoc(threatRef);
+    if (!snap.exists() || snap.data()?.uid !== uid) {
+        throw new Error("Threat not found or access denied.");
+    }
+
+    const payload = {
+        title: updates.title,
+        description: updates.description,
+        riskLevel: updates.riskLevel,
+        category: updates.category,
+        categoryTitle: updates.categoryTitle,
+        prevention: Array.isArray(updates.prevention) ? updates.prevention : [],
+        updatedAt: serverTimestamp(),
+    };
+
+    Object.keys(payload).forEach((key) => {
+        if (typeof payload[key] === "undefined") {
+            delete payload[key];
+        }
+    });
+
+    await updateDoc(threatRef, payload);
+    return true;
 };
