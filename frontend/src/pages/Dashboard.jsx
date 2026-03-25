@@ -45,7 +45,6 @@ const SectionBlock = styled.section`
     flex-direction: column;
     gap: 1.5rem;
     padding: 1.25rem;
-    border: 1px solid var(--border);
     border-radius: 16px;
     background: linear-gradient(160deg, var(--card-bg), rgba(255, 255, 255, 0.02));
 `;
@@ -458,7 +457,7 @@ const Dashboard = () => {
                 />
 
                 {/* Section 1: Key Metrics */}
-                <SectionBlock>
+                {/* <SectionBlock> */}
                 <MetricsGrid>
                     {/* Card 1: Vulnerability Score */}
                     <MetricCard>
@@ -515,10 +514,10 @@ const Dashboard = () => {
                         </CardContent>
                     </MetricCard>
                 </MetricsGrid>
-                </SectionBlock>
+                {/* </SectionBlock> */}
 
                 {/* Section 2: Behavior Insights */}
-                <SectionBlock>
+                {/* <SectionBlock> */}
                 <InsightsGrid>
                     <DashboardCard>
                         <CardHeader>
@@ -580,10 +579,10 @@ const Dashboard = () => {
                         </CardContent>
                     </DashboardCard>
                 </InsightsGrid>
-                </SectionBlock>
+                {/* </SectionBlock> */}
 
                 {/* Section 3: Selected Session Details */}
-                <SectionBlock>
+                {/* <SectionBlock> */}
                 <DashboardCard>
                     <CardHeader>
                         <CardTitle>
@@ -663,7 +662,7 @@ const Dashboard = () => {
                         )}
                     </CardContent>
                 </DashboardCard>
-                </SectionBlock>
+                {/* </SectionBlock> */}
 
             </MainContent>
         </PageContainer>
