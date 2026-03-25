@@ -4,6 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
 import TurnSimulation from "./pages/TurnSimulation";
 import TrainingHome from "./pages/training/TrainingHome";
 import TrainingPaths from "./pages/training/TrainingPaths";
@@ -26,6 +27,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             }
           />

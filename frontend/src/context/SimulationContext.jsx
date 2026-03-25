@@ -245,6 +245,7 @@ export const SimulationProvider = ({ children }) => {
             id: generateId(),
             timestamp: new Date().toISOString(),
             isRead: false,
+            resolved: false,
         }));
     }, [generateId]);
 
@@ -272,6 +273,7 @@ export const SimulationProvider = ({ children }) => {
                             id: generateId(),
                             timestamp: new Date().toISOString(),
                             isRead: false,
+                            resolved: false,
                         }));
                     }
                 }

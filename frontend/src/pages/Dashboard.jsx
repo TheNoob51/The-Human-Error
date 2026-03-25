@@ -16,9 +16,8 @@ import Button from "../components/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/Card";
 import Badge from "../components/Badge";
 import Progress from "../components/Progress";
-import ProfileDetailsPane from "../components/ProfileDetailsPane";
 import { useAuth } from "../context/AuthContext";
-import { getUserSimulations, upsertUserProfile } from "../lib/firestoreService";
+import { getUserSimulations } from "../lib/firestoreService";
 
 /* Navbar related styles removed in favor of reusable Header */
 
@@ -234,11 +233,10 @@ const SessionSelect = styled.select`
 
 const Dashboard = () => {
     const navigate = useNavigate();
-    const { user, userProfile, refreshUserProfile } = useAuth();
+    const { user } = useAuth();
     const [results, setResults] = useState([]);
     const [selectedSessionId, setSelectedSessionId] = useState('ALL');
     const [loading, setLoading] = useState(true);
-    const [isSavingProfile, setIsSavingProfile] = useState(false);
     const [metrics, setMetrics] = useState({
         totalSimulations: 0,
         highRiskCount: 0,
@@ -395,20 +393,6 @@ const Dashboard = () => {
 
     const recentSession = filteredResults[0] || null;
 
-    const handleProfileSave = async (profileData) => {
-        if (!user?.uid) {
-            throw new Error('No authenticated user found.');
-        }
-
-        setIsSavingProfile(true);
-        try {
-            await upsertUserProfile(user.uid, profileData, user);
-            await refreshUserProfile();
-        } finally {
-            setIsSavingProfile(false);
-        }
-    };
-
     return (
         <PageContainer>
             {/* Top Navigation using reusable Header */}
@@ -448,13 +432,6 @@ const Dashboard = () => {
                         ))}
                     </SessionSelect>
                 </SelectorRow>
-
-                <ProfileDetailsPane
-                    user={user}
-                    profile={userProfile}
-                    onSave={handleProfileSave}
-                    isSaving={isSavingProfile}
-                />
 
                 {/* Section 1: Key Metrics */}
                 {/* <SectionBlock> */}

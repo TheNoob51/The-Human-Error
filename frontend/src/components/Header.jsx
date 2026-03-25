@@ -64,6 +64,20 @@ const UserProfile = styled.div`
   gap: 0.75rem;
 `;
 
+const UsernameButton = styled.button`
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
 import { signOut } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { useAuth } from "../context/AuthContext";
@@ -99,9 +113,9 @@ const Header = ({ user }) => {
               </Button>
               <UserProfile>
                 <Avatar fallback={displayUser.email ? displayUser.email[0].toUpperCase() : "U"} />
-                <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>
+                <UsernameButton onClick={() => navigate("/profile")}>
                   {displayUser.displayName || (displayUser.email ? displayUser.email.split('@')[0] : "User")}
-                </span>
+                </UsernameButton>
               </UserProfile>
               <Button variant="ghost" size="sm" onClick={handleLogout}>
                 Logout

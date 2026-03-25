@@ -9,6 +9,8 @@ import { User, AlertCircle } from 'lucide-react';
 const MailLayout = styled.div`
   display: flex;
   height: 100%;
+  min-height: 0;
+  overflow: hidden;
 `;
 
 const Sidebar = styled.div`
@@ -19,6 +21,9 @@ const Sidebar = styled.div`
   display: flex;
   flex-direction: column;
   gap: 5px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 `;
 
 const MailItem = styled.div`
@@ -36,11 +41,12 @@ const MailItem = styled.div`
 const Sender = styled.div`
   font-weight: 600;
   font-size: 14px;
+  color: ${props => props.$unread ? '#111' : '#555'};
 `;
 
 const Subject = styled.div`
   font-size: 12px;
-  color: #555;
+  color: ${props => props.$unread ? '#111' : '#666'};
   margin-top: 2px;
 `;
 
@@ -50,6 +56,9 @@ const Content = styled.div`
   background: white;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 `;
 
 const Header = styled.div`
@@ -174,12 +183,30 @@ const MailApp = () => {
 
   const handleInspectSender = () => {
     logInteraction(PHISHING_INTERACTIONS.INSPECT_SENDER, { emailId: scenario.id });
-    const domain = scenario.senderEmail.split('@')[1] || 'unknown';
-    if (scenario.isLegitimate) {
-      alert(`Sender Domain: ${domain}\n\n✓ This domain appears to be a legitimate company or trusted service domain.`);
-    } else {
-      alert(`Sender Domain: ${domain}\n\n⚠️ This domain looks suspicious! It may be impersonating a trusted service.`);
+    const senderEmail = scenario.senderEmail || 'unknown@unknown';
+    const domain = senderEmail.split('@')[1] || 'unknown';
+    const parts = domain.split('.').filter(Boolean);
+    const tld = parts.length > 0 ? parts[parts.length - 1] : 'unknown';
+    const root = parts.length >= 2 ? `${parts[parts.length - 2]}.${parts[parts.length - 1]}` : domain;
+    const dotCount = Math.max(parts.length - 1, 0);
+    const senderTag = (scenario.senderName || '').toLowerCase().replace(/[^a-z0-9\s]/g, '');
+    const rootLower = root.toLowerCase();
+
+    const clues = [
+      `1) Check the domain carefully: ${domain}`,
+      `2) Root domain looks like: ${root} (TLD: .${tld})`,
+      `3) Dot count in domain: ${dotCount} (more levels can mean redirects/impersonation)`,
+      '4) Verify whether the brand/organization name actually matches the root domain.',
+      '5) Watch for extra words like alerts, support, verify, secure, portal, update in the domain.'
+    ];
+
+    if (senderTag && !rootLower.includes('company') && !rootLower.includes('slack') && !rootLower.includes('microsoft')) {
+      clues.push('6) Compare the sender display name with the actual email domain. They can differ.');
     }
+
+    clues.push('No automatic verdict is shown. Decide using these clues.');
+
+    alert(`Inspect Sender\n\nFrom: ${senderEmail}\n\n${clues.join('\n')}`);
   };
 
   const handleMarkAsSafe = () => {
@@ -222,8 +249,8 @@ const MailApp = () => {
             $resolved={email.resolved}
             onClick={() => markAsRead(email.id)}
           >
-            <Sender>{email.senderName}</Sender>
-            <Subject style={{ fontWeight: email.isRead ? 'normal' : 'bold' }}>
+            <Sender $unread={!email.isRead}>{email.senderName}</Sender>
+            <Subject $unread={!email.isRead} style={{ fontWeight: email.isRead ? 'normal' : '700' }}>
               {email.subject}{email.resolved ? ' ✓' : ''}
             </Subject>
           </MailItem>

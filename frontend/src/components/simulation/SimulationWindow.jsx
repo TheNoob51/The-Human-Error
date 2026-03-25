@@ -183,7 +183,7 @@ const SimulationWindow = ({ id, title, icon, children, width = 800, height = 600
         </WindowControls>
       </TitleBar>
       <Content>
-        <div style={{ pointerEvents: isFocused ? 'auto' : 'none' }}>
+        <div style={{ pointerEvents: isFocused ? 'auto' : 'none', height: '100%' }}>
           {children}
         </div>
       </Content>
