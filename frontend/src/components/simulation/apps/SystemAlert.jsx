@@ -4,7 +4,7 @@ import { AlertOctagon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useWindowManager } from '../WindowManager';
 import { useSimulation } from '../../../context/SimulationContext';
-import { PHISHING_INTERACTIONS } from '../../../constants';
+import { API_BASE_URL, PHISHING_INTERACTIONS } from '../../../constants';
 
 const AlertBox = styled(motion.div)`
   width: 400px;
@@ -193,7 +193,7 @@ const SystemAlert = () => {
 
     const fetchGeminiAlert = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/generate-alert', {
+        const response = await fetch(`${API_BASE_URL}/generate-alert`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

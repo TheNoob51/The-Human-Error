@@ -6,6 +6,7 @@ import {
   saveThreatBriefing,
   updateThreatBriefing,
 } from "../../lib/firestoreService";
+import { API_BASE_URL } from "../../constants";
 
 const severityClass = {
   Low: "sev-low",
@@ -15,8 +16,6 @@ const severityClass = {
 };
 
 const riskOptions = ["Low", "Medium", "High", "Critical"];
-
-const API_BASE_URL = "http://localhost:5000/api";
 
 const formatTime = (isoString) => {
   if (!isoString) return "Now";

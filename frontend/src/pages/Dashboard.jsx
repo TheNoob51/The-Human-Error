@@ -231,6 +231,44 @@ const SessionSelect = styled.select`
         transition: all 0.3s ease;
 `;
 
+const LEGACY_RISK_TO_VULNERABILITY_RANGE = {
+    VERY_HIGH: { min: 84, max: 96 },
+    HIGH: { min: 62, max: 78 },
+    MEDIUM: { min: 32, max: 48 },
+    LOW: { min: 10, max: 22 },
+};
+
+const hashStringToInt = (value) => {
+    if (typeof value !== 'string' || value.length === 0) return 0;
+    let hash = 0;
+    for (let i = 0; i < value.length; i++) {
+        hash = ((hash << 5) - hash) + value.charCodeAt(i);
+        hash |= 0;
+    }
+    return hash;
+};
+
+const stableRangeValue = (min, max, seedValue) => {
+    const range = Math.max(1, (max - min + 1));
+    const hash = Math.abs(hashStringToInt(String(seedValue || 'legacy-score')));
+    return min + (hash % range);
+};
+
+const toNumericVulnerabilityScore = (session) => {
+    const numeric = Number(session?.sessionVulnerabilityScore);
+    if (Number.isFinite(numeric)) {
+        return Math.max(0, Math.min(100, Math.round(numeric)));
+    }
+
+    const normalizedRisk = typeof session?.finalRiskLevel === 'string'
+        ? session.finalRiskLevel.toUpperCase()
+        : 'LOW';
+
+    const range = LEGACY_RISK_TO_VULNERABILITY_RANGE[normalizedRisk] || LEGACY_RISK_TO_VULNERABILITY_RANGE.LOW;
+    const seed = session?.sessionId || session?.id || session?.startTime || session?.endTime || normalizedRisk;
+    return stableRangeValue(range.min, range.max, seed);
+};
+
 const Dashboard = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -326,25 +364,18 @@ const Dashboard = () => {
 
         let high = 0;
         let low = 0;
-        let totalScore = 0;
+        let totalVulnerability = 0;
         let urgencyRisky = 0;
         let authorityRisky = 0;
         let rewardRisky = 0;
         let totalHesitation = 0;
         let hesitationCount = 0;
 
-        const riskMap = {
-            'VERY_HIGH': 0,
-            'HIGH': 1,
-            'MEDIUM': 2,
-            'LOW': 3,
-        };
-
         source.forEach(session => {
             const risk = session.finalRiskLevel || 'LOW';
             if (risk === 'VERY_HIGH' || risk === 'HIGH') high++;
             if (risk === 'MEDIUM' || risk === 'LOW') low++;
-            totalScore += (riskMap[risk] ?? 3);
+            totalVulnerability += toNumericVulnerabilityScore(session);
 
             if (session.avgHesitationMs) {
                 totalHesitation += session.avgHesitationMs;
@@ -366,14 +397,13 @@ const Dashboard = () => {
             });
         });
 
-        const avg = totalScore / source.length;
-        const avgPercentage = Math.round((avg / 3) * 100);
+        const avgVulnerability = Math.round(totalVulnerability / source.length);
 
         setMetrics({
             totalSimulations: source.length,
             highRiskCount: high,
             lowRiskCount: low,
-            averageRiskScore: avgPercentage,
+            averageRiskScore: avgVulnerability,
         });
 
         const getRiskLevel = (count) => {
@@ -446,14 +476,14 @@ const Dashboard = () => {
                         <CardContent>
                             <SplitValueRow>
                                 <MetricValue>{metrics.averageRiskScore}<ScoreMeta>/100</ScoreMeta></MetricValue>
-                                {metrics.averageRiskScore < 50 ? (
+                                {metrics.averageRiskScore >= 50 ? (
                                     <AlertTriangle size={24} color="hsl(var(--destructive))" />
                                 ) : (
                                     <ShieldAlert size={24} color="hsl(38, 92%, 50%)" />
                                 )}
                             </SplitValueRow>
                             <Progress value={metrics.averageRiskScore} style={{ marginTop: "1rem", marginBottom: "0.5rem" }} />
-                            <MetricLabel>Higher score indicates lower susceptibility.</MetricLabel>
+                            <MetricLabel>Higher score indicates higher susceptibility.</MetricLabel>
                         </CardContent>
                     </MetricCard>
 

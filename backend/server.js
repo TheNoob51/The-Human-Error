@@ -20,6 +20,10 @@ app.get('/', (req, res) => {
     res.send('CyberSecurity Simulation Backend Running');
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+if (process.env.VERCEL !== '1') {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
+
+module.exports = app;

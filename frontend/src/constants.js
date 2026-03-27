@@ -9,3 +9,6 @@ export const PHISHING_INTERACTIONS = {
   MISSED_PHISHING: 'MISSED_PHISHING',                        // false negative — marked a phishing email as safe
   MARKED_AS_SAFE: 'MARKED_AS_SAFE',                          // correctly identified a legitimate email
 };
+
+const DEFAULT_API_BASE_URL = 'http://localhost:5000/api';
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, '');
