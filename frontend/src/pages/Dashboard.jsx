@@ -322,6 +322,8 @@ const Dashboard = () => {
             return;
         }
 
+// Vunerablity score
+
         let high = 0;
         let low = 0;
         let totalScore = 0;
