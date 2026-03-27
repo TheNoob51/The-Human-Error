@@ -116,6 +116,9 @@ export const saveSimulationResult = async (uid, sessionData) => {
         startTime: sessionData.startTime,
         endTime: sessionData.endTime,
         finalRiskLevel: sessionData.finalRiskLevel,
+        sessionVulnerabilityScore: Number.isFinite(sessionData.sessionVulnerabilityScore)
+            ? Math.round(sessionData.sessionVulnerabilityScore)
+            : null,
         explanation: sessionData.explanation || "",
         interactions: sessionData.interactions || [],
         emailsGenerated: sessionData.emailsGenerated || 0,

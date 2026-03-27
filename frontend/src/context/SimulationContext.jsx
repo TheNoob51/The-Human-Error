@@ -1,11 +1,61 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
-import { PHISHING_INTERACTIONS } from '../constants';
+import { API_BASE_URL, PHISHING_INTERACTIONS } from '../constants';
 import { useAuth } from './AuthContext';
 import { saveSimulationResult } from '../lib/firestoreService';
 import { auth } from '../lib/firebase';
 
 const SimulationContext = createContext();
+
+const VULNERABILITY_MIN = 0;
+const VULNERABILITY_MAX = 100;
+
+const scoreDeltaByInteraction = {
+    [PHISHING_INTERACTIONS.CREDENTIALS_ENTERED]: 35,
+    [PHISHING_INTERACTIONS.FAKE_LINK_CLICKED]: 20,
+    [PHISHING_INTERACTIONS.MISSED_PHISHING]: 12,
+    [PHISHING_INTERACTIONS.REPORTED_LEGIT_AS_PHISHING]: 8,
+    [PHISHING_INTERACTIONS.REPORT_PHISHING]: -10,
+    [PHISHING_INTERACTIONS.MARKED_AS_SAFE]: -6,
+    [PHISHING_INTERACTIONS.INSPECT_SENDER]: -4,
+};
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const hashStringToInt = (value) => {
+    if (typeof value !== 'string' || value.length === 0) return 0;
+    let hash = 0;
+    for (let i = 0; i < value.length; i++) {
+        hash = ((hash << 5) - hash) + value.charCodeAt(i);
+        hash |= 0;
+    }
+    return hash;
+};
+
+const applyNearZeroFloor = (score, sessionId) => {
+    if (!Number.isFinite(score) || score > 3) return score;
+    const hash = hashStringToInt(String(sessionId || 'fallback-session-id'));
+    return 7 + (Math.abs(hash) % 5);
+};
+
+const calculateSessionVulnerabilityScore = ({ interactions, avgHesitationMs, sessionId }) => {
+    const safeInteractions = Array.isArray(interactions) ? interactions : [];
+    let score = 20;
+
+    safeInteractions.forEach((interaction) => {
+        const type = interaction?.type;
+        if (!type) return;
+        score += scoreDeltaByInteraction[type] || 0;
+    });
+
+    if (Number.isFinite(avgHesitationMs)) {
+        if (avgHesitationMs < 3000) score += 8;
+        else if (avgHesitationMs > 20000) score -= 5;
+    }
+
+    const normalized = Math.round(clamp(score, VULNERABILITY_MIN, VULNERABILITY_MAX));
+    return applyNearZeroFloor(normalized, sessionId);
+};
 
 // ─── 12-template phishing email pool ───
 const allMockEmails = [
@@ -255,7 +305,7 @@ export const SimulationProvider = ({ children }) => {
         if (!fetchLock.current) {
             fetchLock.current = true;
             try {
-                const response = await fetch('http://localhost:5000/api/generate-emails', {
+                const response = await fetch(`${API_BASE_URL}/generate-emails`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -413,16 +463,18 @@ export const SimulationProvider = ({ children }) => {
     }, []);
 
     const calculateRisk = (interactionList) => {
-        if (interactionList.some(i => i.type === PHISHING_INTERACTIONS.CREDENTIALS_ENTERED)) {
+        const safeInteractions = Array.isArray(interactionList) ? interactionList : [];
+
+        if (safeInteractions.some(i => i.type === PHISHING_INTERACTIONS.CREDENTIALS_ENTERED)) {
             return 'VERY_HIGH';
         }
-        if (interactionList.some(i => i.type === PHISHING_INTERACTIONS.FAKE_LINK_CLICKED)) {
+        if (safeInteractions.some(i => i.type === PHISHING_INTERACTIONS.FAKE_LINK_CLICKED)) {
             return 'HIGH';
         }
-        if (interactionList.some(i => i.type === PHISHING_INTERACTIONS.LEGIT_LINK_CLICKED)) {
+        if (safeInteractions.some(i => i.type === PHISHING_INTERACTIONS.LEGIT_LINK_CLICKED)) {
             return 'MEDIUM';
         }
-        if (interactionList.some(i => i.type === PHISHING_INTERACTIONS.REPORT_PHISHING)) {
+        if (safeInteractions.some(i => i.type === PHISHING_INTERACTIONS.REPORT_PHISHING)) {
             return 'LOW';
         }
         return 'LOW';
@@ -436,22 +488,36 @@ export const SimulationProvider = ({ children }) => {
 
         setIsSaving(true);
 
-        const finalRiskLevel = calculateRisk(currentSession.interactions);
+        const safeInteractions = Array.isArray(currentSession.interactions)
+            ? currentSession.interactions
+            : [];
 
-        const hesitationTimes = currentSession.interactions
-            .filter(i => i.hesitationMs != null)
-            .map(i => i.hesitationMs);
+        const finalRiskLevel = calculateRisk(safeInteractions);
+
+        const hesitationTimes = safeInteractions
+            .filter(i => i?.hesitationMs != null)
+            .map(i => i.hesitationMs)
+            .filter(Number.isFinite);
         const avgHesitationMs = hesitationTimes.length > 0
             ? Math.round(hesitationTimes.reduce((a, b) => a + b, 0) / hesitationTimes.length)
             : null;
+
+        const vulnerabilitySeed = currentSession.sessionId || currentSession.startTime || currentSession.endTime || 'fallback-session-id';
+        const sessionVulnerabilityScore = calculateSessionVulnerabilityScore({
+            interactions: safeInteractions,
+            avgHesitationMs,
+            sessionId: vulnerabilitySeed,
+        });
 
         const partialSession = {
             ...currentSession,
             endTime: new Date().toISOString(),
             finalRiskLevel,
+            sessionVulnerabilityScore,
             explanation: "Generating analysis...",
             avgHesitationMs,
             inbox: currentInbox,
+            interactions: safeInteractions,
         };
 
         // 1. Save to localStorage immediately so Dashboard loads instantly
@@ -471,11 +537,11 @@ export const SimulationProvider = ({ children }) => {
         // 3. Fetch Gemini explanation + save to Firestore in background
         let explanation = partialSession.explanation;
         try {
-            const response = await fetch('http://localhost:5000/api/generate-explanation', {
+            const response = await fetch(`${API_BASE_URL}/generate-explanation`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    interactions: currentSession.interactions,
+                    interactions: safeInteractions,
                     finalRiskLevel,
                     avgHesitationMs,
                     profile: currentSession.profileSnapshot || null,
