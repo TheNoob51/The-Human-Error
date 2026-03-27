@@ -101,3 +101,4 @@ export const WindowManagerProvider = ({ children }) => {
         </WindowManagerContext.Provider>
     );
 };
+

@@ -1,0 +1,539 @@
+THE HUMAN ERROR - FULL TECHNICAL EXPLANATION (AI-ORIENTED)
+
+============================================================
+1) PROJECT IDENTITY AND PURPOSE
+============================================================
+
+Project name:
+The Human Error
+
+Core type:
+A full-stack cybersecurity training platform.
+
+Primary problem solved:
+Most phishing awareness tools test memorized theory. This project tests behavior under realistic pressure and tracks user decisions over time.
+
+What makes it different:
+- Simulated desktop OS interface (not just static quiz forms)
+- Behavioral telemetry collection (clicks, sender inspection, credential entry, hesitation time)
+- AI-generated phishing and alert content with profile-based tailoring
+- Session scoring + AI explanation + persistence for trend analysis
+- Separate training subsystem (guided scenarios, random game, threat generator)
+
+End outcome for users:
+Users practice handling social engineering attacks in a safe environment, receive measurable risk results, and improve through repeated simulations and training modules.
+
+
+============================================================
+2) TECHNOLOGY STACK
+============================================================
+
+Frontend:
+- React 19
+- Vite 7
+- react-router-dom 7
+- styled-components
+- Framer Motion
+- Lucide icons
+
+Backend:
+- Node.js + Express 5
+- @google/generative-ai (Gemini)
+- CORS + dotenv
+
+Data and identity:
+- Firebase Authentication (email/password, Google, GitHub)
+- Firestore for user profiles and simulation session storage
+- localStorage fallback for resilience
+
+
+============================================================
+3) HIGH-LEVEL SYSTEM ARCHITECTURE
+============================================================
+
+The project is split into two deployable applications:
+
+A) Frontend application
+Responsibilities:
+- User routing and navigation
+- Auth state handling
+- Simulation runtime and windows UI
+- Interaction capture and scoring trigger
+- Dashboard analytics rendering
+- Training UIs (scenario simulator, game, threat generator)
+
+B) Backend application
+Responsibilities:
+- AI content generation endpoints
+- Fallback content generation when AI is unavailable
+- Threat category and threat-instance APIs
+- Explanation generation for post-session analysis
+
+Data flow direction:
+Frontend -> Backend API -> Gemini/fallback -> Frontend
+Frontend -> Firestore for persistence
+Frontend -> localStorage as offline/backup cache
+
+
+============================================================
+4) FRONTEND ROUTE MAP (FUNCTIONAL SURFACE)
+============================================================
+
+Public routes:
+- /                        Landing page
+- /auth                    Combined login/signup UI
+- /login                   Login mode
+- /signup                  Signup mode
+
+Protected routes (auth required):
+- /dashboard               Behavioral analytics dashboard
+- /simulation              Full desktop simulation flow
+- /training                Training directory
+- /training/threat-generator
+- /training/game
+- /training/simulator/:scamId
+- /training/:categoryId
+
+ProtectedRoute behavior:
+- Shows loading screen while auth state resolves.
+- Redirects unauthenticated users to /auth.
+
+
+============================================================
+5) AUTHENTICATION + USER PROFILE LIFECYCLE
+============================================================
+
+Auth providers supported:
+- Email/password
+- Google OAuth
+- GitHub OAuth
+
+Lifecycle details:
+1. User signs in via Auth page.
+2. Firebase auth state changes.
+3. Auth context listener runs.
+4. System ensures profile doc exists in Firestore:
+   - Creates profile for first-time users.
+   - Merges minimal identity fields for returning users.
+5. User profile is loaded into context for app-wide usage.
+
+Profile schema intent:
+The profile is not decorative metadata; it is a simulation-targeting context packet.
+It includes:
+- organizationName
+- industry
+- department
+- roleTitle
+- personaType
+- workEnvironment
+- experienceLevel
+- emailDomain
+- commonTools
+- simulationFocus
+- notes
+
+Why this matters:
+Profile values are sent to backend generation endpoints so lures can match realistic user context (student, finance, corporate ops, etc.).
+
+
+============================================================
+6) DASHBOARD ANALYTICS MODEL
+============================================================
+
+Dashboard objective:
+Convert raw interactions into interpretable behavior metrics.
+
+Data sourcing strategy:
+1. Try Firestore sessions for current user.
+2. If unavailable/empty, fallback to localStorage sessions.
+
+Computed metrics:
+- Total simulations
+- High-risk simulation count
+- Low-risk simulation count
+- Average risk score (normalized to percentage)
+- Risk breakdown by trigger class:
+  - urgency based
+  - authority based
+  - reward based
+- Average hesitation time (seconds)
+
+Risk breakdown heuristic:
+Dashboard inspects session interactions and correlates failures with clue text from matched emails (for urgency/authority/reward language).
+
+Session detail view:
+- Interaction timeline
+- Per-interaction status badge
+- Session final risk label
+- AI analysis paragraph
+
+Profile editing integration:
+Dashboard contains an editable profile pane. Saving updates Firestore and refreshes in-memory profile for immediate downstream simulation usage.
+
+
+============================================================
+7) SIMULATION ENGINE - FULL WORKFLOW
+============================================================
+
+Simulation flow state machine:
+IDLE -> RUNNING -> COMPLETED
+
+A) Entry and briefing
+- User opens /simulation.
+- Briefing page explains mission.
+- Start button initializes simulation context.
+
+B) Session initialization
+On start:
+- new sessionId generated
+- startTime set
+- interactions array created
+- profileSnapshot captured (from user profile context)
+- initial inbox generated (target 3 emails)
+
+C) Email generation strategy
+Primary path:
+- Frontend calls backend /api/generate-emails with count + profile.
+
+Fallback path:
+- If backend call fails or invalid payload, frontend chooses from local template pool.
+
+Refill behavior:
+- Inbox monitors unresolved email count.
+- If pending emails low, auto-generates 2-3 more.
+
+D) Desktop simulation UX components
+- Mail window: reads email, inspect sender, report, mark safe, click links.
+- Browser window: fake/legit destination behavior simulation.
+- System alert window: phishing-style update/MFA prompts.
+- Taskbar + window manager: open/close/focus/minimize/maximize.
+
+E) Interaction telemetry
+Each action logs:
+- timestamp
+- interaction type
+- details payload (emailId/link/source/etc.)
+- hesitationMs when available
+
+Important interaction classes:
+- EMAIL_OPENED
+- INSPECT_SENDER
+- REPORT_PHISHING
+- LEGIT_LINK_CLICKED
+- FAKE_LINK_CLICKED
+- CREDENTIALS_ENTERED
+- REPORTED_LEGIT_AS_PHISHING
+- MISSED_PHISHING
+- MARKED_AS_SAFE
+
+F) Risk scoring logic (session final)
+Simplified decision hierarchy:
+- If credentials entered => VERY_HIGH
+- Else if fake link clicked => HIGH
+- Else if legit link clicked => MEDIUM
+- Else if report phishing / safe path => LOW
+
+G) Session ending sequence
+When user stops simulation:
+1. Compute final risk + avg hesitation.
+2. Save partial session immediately to localStorage (fast UX).
+3. Trigger AI explanation generation.
+4. Update localStorage with final explanation.
+5. Save complete session to Firestore (if authenticated).
+6. Move state to COMPLETED, route user to dashboard.
+
+This sequencing ensures dashboard feedback is fast even when network is slow.
+
+
+============================================================
+8) SYSTEM ALERT SUBFLOW (SPECIALIZED BEHAVIOR MODEL)
+============================================================
+
+SystemAlert purpose:
+Introduce non-email phishing vectors (fake update prompts, MFA approval fatigue).
+
+Alert scenarios:
+- update prompt
+- mfa prompt
+
+Generation strategy:
+- Calls backend /api/generate-alert with scenario + profile + recent interactions.
+- If response invalid/unavailable, uses local fallback alert content.
+
+Additional scoring context:
+Alert subsystem computes baseline risk from prior mail interactions and applies score deltas based on actions:
+- resolve (unsafe) increases risk more
+- inspect can reduce risk
+- ignore behavior handled safely in simulation logic
+
+It logs alert_action events and may emit related phishing interaction tags.
+
+
+============================================================
+9) BACKEND API DESIGN
+============================================================
+
+Base path:
+/api
+
+A) /generate-emails (GET or POST)
+Input:
+- count (1..5)
+- profile object
+Output:
+- array of phishing email objects
+Behavior:
+- Gemini first
+- strict JSON parse/validation
+- fallback templates if AI unavailable or malformed
+
+B) /generate-phishing (POST)
+Input:
+- optional prompt context
+Output:
+- single phishing scenario object
+Behavior:
+- Gemini generated JSON
+- parse and return
+
+C) /generate-alert (POST)
+Input:
+- scenario (mfa/update)
+- profile
+- recentInteractions
+Output:
+- phishing-style alert object
+Behavior:
+- Gemini or fallback
+
+D) /generate-explanation (POST)
+Input:
+- interactions
+- finalRiskLevel
+- avgHesitationMs
+- profile
+Output:
+- explanation text
+Behavior:
+- Gemini or fallback sentence template
+
+E) Training threat endpoints
+- /threats/categories
+- /threats/generate?category=...
+- /threats/random
+
+These endpoints use Gemini when available and a large local dataset fallback.
+
+
+============================================================
+10) PERSISTENCE MODEL
+============================================================
+
+Firestore collections:
+1) users
+- user profile information
+- createdAt, updatedAt
+
+2) simulation_sessions
+- uid
+- sessionId
+- startTime/endTime
+- finalRiskLevel
+- explanation
+- interactions[]
+- emailsGenerated
+- avgHesitationMs
+- profileSnapshot
+- createdAt
+
+localStorage backup key:
+- simulation_results
+
+Design philosophy:
+- Prefer cloud persistence for durable analytics.
+- Preserve local usability during backend/firestore failures.
+- Keep dashboard experience resilient.
+
+
+============================================================
+11) TRAINING SUBSYSTEM - DETAILED
+============================================================
+
+Training has 3 major learning modes:
+
+A) Directory + category simulator
+- User selects thematic tracks (emails, trojans, mobile, social, etc.).
+- User launches scenario cards with realistic lure text.
+- User chooses good/bad response.
+- System reveals consequence and then educational breakdown:
+  - how attack works
+  - red flags
+  - defense protocol
+
+B) Threat generator
+- User picks optional category.
+- System generates one threat case:
+  - title
+  - description
+  - risk level
+  - prevention tips
+  - category metadata
+- Keeps recent history and simple stats.
+
+C) Training game (20 rounds)
+- Difficulty modes: easy/medium/hard
+- Randomized scenario selection from large pool
+- Scoring + penalties + streak bonuses
+- Instant feedback per round
+- Final achievement label based on accuracy/streak
+
+Purpose of subsystem:
+Simulation mode measures real behavior in an immersive UI.
+Training mode provides repeated practice and explicit teaching loops.
+Together they create both assessment and improvement paths.
+
+
+============================================================
+12) LOCAL THREAT DATABASE (BACKEND UTILS)
+============================================================
+
+The backend includes a broad threat taxonomy used for fallback and variety.
+Current categories include:
+- phishing
+- malware
+- ransomware
+- socialEngineering
+- passwordAttacks
+- ddosAttacks
+- cloudSecurity
+- iotVulnerabilities
+- mobileThreats
+- supplyChain
+
+For each category:
+- multiple example threats
+- risk level
+- prevention list
+- optional CVE context
+
+Utility functions:
+- getRandomThreatFromCategory
+- getAllCategories
+- getRandomThreat
+
+
+============================================================
+13) UI/UX DESIGN CHARACTERISTICS
+============================================================
+
+Global visual style:
+- Dark gradient base
+- grid overlay texture
+- blue/cyan accent palette
+- motion transitions and card lift effects
+
+Simulation style:
+- OS-like window desktop with taskbar and icons
+
+Training style:
+- Distinct shell and cards with responsive layout
+- separate training stylesheet for consistency
+
+Component architecture:
+- reusable primitives: Button, Card, Input, Badge, Progress, Avatar
+- shared Header with auth-aware actions
+
+
+============================================================
+14) RESILIENCE, SAFETY, AND FAILURE HANDLING
+============================================================
+
+Project has multiple graceful-degradation paths:
+- Gemini missing -> fallback generated content
+- malformed AI JSON -> fallback objects
+- Firestore unavailable -> localStorage usage
+- missing profile context -> general/default prompts
+
+Why this is important:
+The app remains demonstrable and usable in classroom/dev setups even if cloud dependencies are partially unavailable.
+
+
+============================================================
+15) KEY INTERNAL CONCEPTS FOR AI AGENTS
+============================================================
+
+If another AI needs to reason about this codebase, treat these as core invariants:
+
+1. SimulationContext is the behavioral source of truth.
+- session, inbox, selected email, interaction logs, and endSimulation flow all live there.
+
+2. User profile is operational context, not cosmetic data.
+- profileSnapshot is persisted into each session and fed into generation endpoints.
+
+3. Risk model is rule-based and interaction-driven.
+- final risk level is derived from explicit action categories.
+
+4. Dashboard analytics are computed from stored sessions.
+- do not assume a separate analytics engine/service.
+
+5. Training subsystem is independent of core simulation runtime.
+- it uses static and API-assisted content but does not reuse simulation windows.
+
+6. Backend endpoints are designed to be robust under AI failure.
+- always inspect fallback behavior before assuming generation outage is fatal.
+
+
+============================================================
+16) END-TO-END USER VALUE STORY
+============================================================
+
+Step 1:
+User signs in and optionally completes contextual profile.
+
+Step 2:
+User runs immersive phishing simulation and behaves naturally.
+
+Step 3:
+System captures behavior, computes risk, and provides AI explanation.
+
+Step 4:
+User reviews dashboard trends and weaknesses.
+
+Step 5:
+User trains with targeted categories, random drills, and threat generator.
+
+Step 6:
+User reruns simulation to measure improvement over time.
+
+This closes the feedback loop from awareness -> behavior measurement -> guided improvement -> reassessment.
+
+
+============================================================
+17) SUGGESTED EXTENSIONS (FOR FUTURE WORK)
+============================================================
+
+Potential enhancements that align with current architecture:
+- Per-interaction weighted scoring model instead of simple hierarchy
+- Time-series dashboard (week/month trend charts)
+- Team/admin dashboards for cohort analytics
+- Scenario difficulty adaptation based on past user performance
+- More enterprise integrations (SSO, SIEM export, LMS integration)
+- More non-email vectors (voice phishing, QR phishing, collaboration-tool scams)
+
+
+============================================================
+18) CONCLUSION
+============================================================
+
+The Human Error is a full-stack behavioral cybersecurity training system that combines:
+- realistic simulation UX,
+- AI-assisted dynamic content,
+- robust fallback logic,
+- persistent performance analytics,
+- and a structured training ecosystem.
+
+From an AI analysis perspective, the project is best understood as two tightly connected loops:
+1) Assessment loop (simulation + dashboard)
+2) Improvement loop (training modules + replay)
+
+That dual-loop design is the core architecture and pedagogical strength of this project.

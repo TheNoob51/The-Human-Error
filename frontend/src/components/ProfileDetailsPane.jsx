@@ -22,6 +22,18 @@ const PaneGrid = styled.div`
 const LeftAlignedCard = styled(Card)`
   text-align: left;
   align-items: stretch;
+
+  &:hover {
+    box-shadow: 0 14px 34px rgba(2, 6, 23, 0.35);
+    border-color: var(--border);
+  }
+`;
+
+const StaticButton = styled(Button)`
+  &:hover {
+    transform: none;
+    box-shadow: inherit;
+  }
 `;
 
 const Form = styled.form`
@@ -51,7 +63,7 @@ const Select = styled.select`
   height: 2.5rem;
   width: 100%;
   border-radius: var(--radius);
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   background-color: hsl(var(--background));
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
@@ -68,7 +80,7 @@ const Textarea = styled.textarea`
   min-height: 6.75rem;
   width: 100%;
   border-radius: var(--radius);
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   background-color: hsl(var(--background));
   padding: 0.75rem;
   font-size: 0.875rem;
@@ -101,7 +113,7 @@ const HighlightRow = styled.div`
   gap: 0.75rem;
   padding: 0.85rem 1rem;
   border-radius: var(--radius);
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
   background: hsl(var(--muted) / 0.3);
 
   svg {
@@ -372,17 +384,17 @@ const ProfileDetailsPane = ({ user, profile, onSave, isSaving }) => {
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 {isEditing ? (
                   <>
-                    <Button type="button" variant="ghost" onClick={handleCancel} disabled={isSaving}>
+                    <StaticButton type="button" variant="ghost" onClick={handleCancel} disabled={isSaving}>
                       Cancel
-                    </Button>
-                    <Button type="submit" disabled={isSaving}>
+                    </StaticButton>
+                    <StaticButton type="submit" disabled={isSaving}>
                       {isSaving ? "Saving..." : "Save Profile"}
-                    </Button>
+                    </StaticButton>
                   </>
                 ) : (
-                  <Button type="button" onClick={handleEdit}>
+                  <StaticButton type="button" onClick={handleEdit}>
                     Edit Profile
-                  </Button>
+                  </StaticButton>
                 )}
               </div>
             </FooterRow>

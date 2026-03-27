@@ -16,6 +16,140 @@ const getAchievement = (accuracy, maxStreak) => {
   return "Getting Started";
 };
 
+const getFirstUrl = (text = "") => text.match(/https?:\/\/\S+/i)?.[0] || null;
+
+const renderScenarioSurface = (scenario) => {
+  if (!scenario) return null;
+
+  const sender = scenario.sender || "Unknown";
+  const subject = scenario.subject || scenario.title;
+  const content = scenario.content || "";
+  const firstUrl = getFirstUrl(content);
+  const type = (scenario.type || "").toLowerCase();
+
+  if (type === "email") {
+    const senderMatch = sender.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+    const senderName = senderMatch?.[1] || sender;
+    const senderEmail = senderMatch?.[2] || "unknown@source.local";
+
+    return (
+      <article className="sim-email-frame" aria-label="Email scenario preview">
+        <div className="sim-email-toolbar">
+          <span className="sim-toolbar-pill">Inbox</span>
+          <span className="sim-toolbar-pill">Unread</span>
+          <span className="sim-toolbar-time">Now</span>
+        </div>
+        <div className="sim-email-shell">
+          <header className="sim-email-header">
+            <div className="sim-avatar" aria-hidden="true">{senderName.charAt(0).toUpperCase()}</div>
+            <div className="sim-email-headcopy">
+              <h4>{subject}</h4>
+              <p>
+                <strong>{senderName}</strong>
+                <span>{` <${senderEmail}>`}</span>
+              </p>
+            </div>
+          </header>
+          <dl className="sim-email-meta">
+            <div><dt>From</dt><dd>{sender}</dd></div>
+            <div><dt>To</dt><dd>you@company.com</dd></div>
+            <div><dt>Subject</dt><dd>{subject}</dd></div>
+          </dl>
+          <div className="sim-message">{content}</div>
+        </div>
+      </article>
+    );
+  }
+
+  if (type === "sms" || type === "phone") {
+    return (
+      <article className="sim-phone-frame" aria-label="SMS scenario preview">
+        <div className="sim-phone-notch" aria-hidden="true" />
+        <div className="sim-phone-status"><span>9:41</span><span>4G</span></div>
+        <div className="sim-phone-appbar">
+          <div className="sim-phone-avatar" aria-hidden="true">{sender.charAt(0).toUpperCase()}</div>
+          <div>
+            <h4>{sender}</h4>
+            <p>Text Message</p>
+          </div>
+        </div>
+        <div className="sim-phone-chat">
+          <div className="sim-sms-bubble incoming">
+            <p>{content}</p>
+            {firstUrl ? <span className="sim-sms-link">{firstUrl}</span> : null}
+            <time>Now</time>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  if (type === "whatsapp") {
+    return (
+      <article className="sim-whatsapp-frame" aria-label="WhatsApp scenario preview">
+        <div className="sim-whatsapp-appbar">
+          <div className="sim-whatsapp-avatar" aria-hidden="true">{sender.charAt(0).toUpperCase()}</div>
+          <div>
+            <h4>{sender}</h4>
+            <p>online</p>
+          </div>
+        </div>
+        <div className="sim-whatsapp-chat">
+          <div className="sim-wa-bubble">
+            <small>Forwarded</small>
+            <p>{content}</p>
+            {firstUrl ? <span className="sim-wa-link">{firstUrl}</span> : null}
+            <time>09:41</time>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  if (type === "website") {
+    return (
+      <article className="sim-web-frame" aria-label="Website scenario preview">
+        <div className="sim-web-bar">
+          <span className="sim-web-dot" />
+          <span className="sim-web-dot" />
+          <span className="sim-web-dot" />
+          <div className="sim-web-address">{firstUrl || "https://secure-site.example"}</div>
+        </div>
+        <div className="sim-web-content">
+          <h4>{sender}</h4>
+          <h5>{subject}</h5>
+          <p>{content}</p>
+          <button type="button" className="sim-web-cta">Continue</button>
+        </div>
+      </article>
+    );
+  }
+
+  if (type === "notification") {
+    return (
+      <article className="sim-social-frame" aria-label="Social notification preview">
+        <header className="sim-social-head">
+          <div className="sim-social-avatar" aria-hidden="true">{sender.charAt(0).toUpperCase()}</div>
+          <div>
+            <h4>{sender}</h4>
+            <p>{subject || "Security Notification"}</p>
+          </div>
+          <span className="sim-social-badge">Now</span>
+        </header>
+        <div className="sim-social-message">
+          <p>{content}</p>
+          <div className="sim-social-meta">
+            <span>Notification</span>
+            <span>{scenario.riskLevel} Risk</span>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  return <pre>{content}</pre>;
+};
+
 const TrainingGame = () => {
   const allScenarios = useMemo(() => getAllScenarios(), []);
 
@@ -124,7 +258,7 @@ const TrainingGame = () => {
           <article className="scenario-block">
             <h3>{current.title}</h3>
             <p className="scenario-meta">{current.category || current.type} • {current.riskLevel}</p>
-            <pre>{current.content}</pre>
+            {renderScenarioSurface(current)}
 
             <div className="options-grid">
               {current.options.map((option) => (
@@ -174,3 +308,4 @@ const TrainingGame = () => {
 };
 
 export default TrainingGame;
+

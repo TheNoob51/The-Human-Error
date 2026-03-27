@@ -90,7 +90,7 @@ const Divider = styled.div`
     left: 0;
     width: 100%;
     height: 1px;
-    background-color: hsl(var(--border));
+    background-color: hsl(var(--border-hsl));
   }
 
   span {
@@ -290,3 +290,4 @@ const Auth = ({ initialMode = "login" }) => {
 };
 
 export default Auth;
+

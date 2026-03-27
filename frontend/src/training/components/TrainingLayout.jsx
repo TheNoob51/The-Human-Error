@@ -2,7 +2,8 @@ import { Link, useLocation } from "react-router-dom";
 import "../TrainingStyles.css";
 
 const navItems = [
-  { to: "/training", label: "Directory" },
+  { to: "/training", label: "Overview" },
+  { to: "/training/paths", label: "Training Paths" },
   { to: "/training/threat-generator", label: "Threat Generator" },
   { to: "/training/game", label: "Training Game" },
   { to: "/dashboard", label: "Dashboard" },
@@ -28,9 +29,15 @@ const TrainingLayout = ({ title, subtitle, children }) => {
 
         <nav className="training-nav">
           {navItems.map((item) => {
-            const active = item.to === "/training"
-              ? location.pathname.startsWith("/training") && !location.pathname.startsWith("/training/threat-generator") && !location.pathname.startsWith("/training/game")
-              : location.pathname.startsWith(item.to);
+            const isOverview = item.to === "/training";
+            const isPaths = item.to === "/training/paths";
+            const isCategoryRoute = /^\/training\/[^/]+$/.test(location.pathname)
+              && !["/training", "/training/game", "/training/threat-generator", "/training/paths"].includes(location.pathname);
+            const active = isOverview
+              ? location.pathname === "/training"
+              : isPaths
+                ? location.pathname.startsWith("/training/paths") || location.pathname.startsWith("/training/simulator/") || isCategoryRoute
+                : location.pathname.startsWith(item.to);
             return (
               <Link
                 key={item.to}
@@ -57,3 +64,4 @@ const TrainingLayout = ({ title, subtitle, children }) => {
 };
 
 export default TrainingLayout;
+

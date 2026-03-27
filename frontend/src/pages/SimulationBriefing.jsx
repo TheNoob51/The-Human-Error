@@ -151,3 +151,4 @@ const SimulationBriefing = ({ onStart, onBack }) => {
 };
 
 export default SimulationBriefing;
+

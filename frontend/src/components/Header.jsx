@@ -9,7 +9,7 @@ const HeaderContainer = styled.header`
   top: 0;
   z-index: 50;
   width: 100%;
-  border-bottom: 1px solid hsl(var(--border));
+  border-bottom: 1px solid hsl(var(--border-hsl));
   background-color: hsl(var(--background) / 0.8);
   backdrop-filter: blur(8px);
   
@@ -38,10 +38,10 @@ const LogoSection = styled.div`
   color: hsl(var(--foreground));
   
   img {
-    height: 2rem;
+    height: 3rem;
     width: auto;
     object-fit: contain;
-    filter: invert(1);
+    // filter: invert(1);
     /* In light mode, invert(0) might be better if logo is dark, 
        assuming logo is white and background is dark? 
        Actually, standard shadcn is light mode default. 
@@ -62,6 +62,20 @@ const UserProfile = styled.div`
   display: flex;
   align-items: center;
   gap: 0.75rem;
+`;
+
+const UsernameButton = styled.button`
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
 import { signOut } from "firebase/auth";
@@ -99,9 +113,9 @@ const Header = ({ user }) => {
               </Button>
               <UserProfile>
                 <Avatar fallback={displayUser.email ? displayUser.email[0].toUpperCase() : "U"} />
-                <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>
+                <UsernameButton onClick={() => navigate("/profile")}>
                   {displayUser.displayName || (displayUser.email ? displayUser.email.split('@')[0] : "User")}
-                </span>
+                </UsernameButton>
               </UserProfile>
               <Button variant="ghost" size="sm" onClick={handleLogout}>
                 Logout
@@ -120,3 +134,4 @@ const Header = ({ user }) => {
 
 
 export default Header;
+

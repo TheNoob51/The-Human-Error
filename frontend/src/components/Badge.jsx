@@ -18,7 +18,7 @@ const badgeVariants = {
   `,
     outline: css`
     color: hsl(var(--foreground));
-    border: 1px solid hsl(var(--border));
+    border: 1px solid hsl(var(--border-hsl));
   `,
     success: css` /* Custom for dashboard */
     background-color: hsl(142, 76%, 36%);
@@ -59,3 +59,4 @@ const Badge = ({ variant = "default", children, ...props }) => {
 };
 
 export default Badge;
+

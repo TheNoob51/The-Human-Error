@@ -11,7 +11,7 @@ const AvatarRoot = styled.div`
   border-radius: 9999px;
   overflow: hidden;
   background-color: hsl(var(--muted));
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--border-hsl));
 `;
 
 const AvatarImage = styled.img`
@@ -50,3 +50,4 @@ const Avatar = React.forwardRef(({ src, alt, fallback, ...props }, ref) => {
 Avatar.displayName = "Avatar";
 
 export default Avatar;
+

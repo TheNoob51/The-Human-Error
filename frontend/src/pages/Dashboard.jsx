@@ -16,15 +16,14 @@ import Button from "../components/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/Card";
 import Badge from "../components/Badge";
 import Progress from "../components/Progress";
-import ProfileDetailsPane from "../components/ProfileDetailsPane";
 import { useAuth } from "../context/AuthContext";
-import { getUserSimulations, upsertUserProfile } from "../lib/firestoreService";
+import { getUserSimulations } from "../lib/firestoreService";
 
 /* Navbar related styles removed in favor of reusable Header */
 
 const PageContainer = styled.div`
   min-height: 100vh;
-  background-color: hsl(var(--background));
+    background: transparent;
   display: flex;
   flex-direction: column;
 `;
@@ -38,6 +37,42 @@ const MainContent = styled.main`
   display: flex;
   flex-direction: column;
   gap: 2rem;
+`;
+
+const SectionBlock = styled.section`
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1.25rem;
+    border-radius: 16px;
+    background: linear-gradient(160deg, var(--card-bg), rgba(255, 255, 255, 0.02));
+`;
+
+const PageHeaderRow = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+`;
+
+const DashboardTitle = styled.h1`
+    font-size: clamp(1.9rem, 2.4vw, 2.4rem);
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.03em;
+`;
+
+const DashboardSubtitle = styled.p`
+    color: var(--text-secondary);
+    margin: 0.35rem 0 0;
+`;
+
+const HeaderActions = styled.div`
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
 `;
 
 // Grid Layouts
@@ -63,7 +98,7 @@ const InsightsGrid = styled.div`
 
 // Custom Card Styles
 const MetricValue = styled.div`
-  font-size: 2.5rem;
+    font-size: clamp(2.1rem, 3vw, 2.8rem);
   font-weight: 800;
   line-height: 1;
   margin: 0.5rem 0;
@@ -71,7 +106,70 @@ const MetricValue = styled.div`
 
 const MetricLabel = styled.p`
   font-size: 0.875rem;
-  color: hsl(var(--muted-foreground));
+    color: var(--text-secondary);
+`;
+
+const DashboardCard = styled(Card)`
+    &:hover {
+        box-shadow: 0 14px 34px rgba(2, 6, 23, 0.35);
+        border-color: var(--border);
+    }
+`;
+
+const MetricCard = styled(DashboardCard)`
+    text-align: left;
+`;
+
+const DashboardButton = styled(Button)`
+    &:hover {
+        transform: none;
+        box-shadow: inherit;
+    }
+`;
+
+const ScoreMeta = styled.span`
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+`;
+
+const SplitValueRow = styled.div`
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+`;
+
+const RiskProfileGrid = styled.div`
+    display: flex;
+    gap: 1rem;
+    margin: 0.75rem 0 1rem;
+`;
+
+const RiskProfileCell = styled.div`
+    text-align: center;
+    flex: 1;
+    border-radius: 12px;
+    padding: 10px;
+    border: 1px solid transparent;
+    background-color: ${(props) => props.$tone === 'high' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(34, 197, 94, 0.12)'};
+    border-color: ${(props) => props.$tone === 'high' ? 'rgba(239, 68, 68, 0.28)' : 'rgba(34, 197, 94, 0.28)'};
+`;
+
+const RiskProfileValue = styled.div`
+    font-size: 2rem;
+    font-weight: 800;
+    color: ${(props) => props.$tone === 'high' ? 'var(--danger)' : 'var(--success)'};
+`;
+
+const RiskProfileLabel = styled.div`
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+`;
+
+const SessionHeading = styled.span`
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 600;
 `;
 
 const RiskList = styled.div`
@@ -85,9 +183,10 @@ const RiskItem = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem;
-  border-radius: var(--radius);
-  border: 1px solid hsl(var(--border));
+    border-radius: 12px;
+    border: 1px solid var(--border);
   background-color: hsl(var(--muted) / 0.3);
+    transition: all 0.3s ease;
 `;
 
 const Table = styled.table`
@@ -97,24 +196,20 @@ const Table = styled.table`
   
   th {
     text-align: left;
-    padding: 0.75rem 1rem;
-    color: hsl(var(--muted-foreground));
+        padding: 0.9rem 1rem;
+        color: var(--text-secondary);
     font-weight: 500;
-    border-bottom: 1px solid hsl(var(--border));
+    border-bottom: 1px solid hsl(var(--border-hsl));
+        background: rgba(255, 255, 255, 0.02);
   }
   
   td {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid hsl(var(--border));
+        padding: 0.85rem 1rem;
+    border-bottom: 1px solid hsl(var(--border-hsl));
   }
   
   tr:last-child td {
     border-bottom: none;
-  }
-
-  /* basic hover row */
-  tbody tr:hover {
-     background-color: hsl(var(--muted) / 0.5);
   }
 `;
 
@@ -123,24 +218,25 @@ const SelectorRow = styled.div`
     align-items: center;
     gap: 0.75rem;
     flex-wrap: wrap;
+    padding-top: 0.25rem;
 `;
 
 const SessionSelect = styled.select`
-    padding: 0.5rem 0.75rem;
-    border: 1px solid hsl(var(--border));
-    border-radius: var(--radius);
-    background: hsl(var(--background));
+        padding: 0.56rem 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: rgba(15, 23, 42, 0.7);
     color: hsl(var(--foreground));
     min-width: 220px;
+        transition: all 0.3s ease;
 `;
 
 const Dashboard = () => {
     const navigate = useNavigate();
-    const { user, userProfile, refreshUserProfile } = useAuth();
+    const { user } = useAuth();
     const [results, setResults] = useState([]);
     const [selectedSessionId, setSelectedSessionId] = useState('ALL');
     const [loading, setLoading] = useState(true);
-    const [isSavingProfile, setIsSavingProfile] = useState(false);
     const [metrics, setMetrics] = useState({
         totalSimulations: 0,
         highRiskCount: 0,
@@ -226,6 +322,8 @@ const Dashboard = () => {
             return;
         }
 
+// Vunerablity score
+
         let high = 0;
         let low = 0;
         let totalScore = 0;
@@ -297,20 +395,6 @@ const Dashboard = () => {
 
     const recentSession = filteredResults[0] || null;
 
-    const handleProfileSave = async (profileData) => {
-        if (!user?.uid) {
-            throw new Error('No authenticated user found.');
-        }
-
-        setIsSavingProfile(true);
-        try {
-            await upsertUserProfile(user.uid, profileData, user);
-            await refreshUserProfile();
-        } finally {
-            setIsSavingProfile(false);
-        }
-    };
-
     return (
         <PageContainer>
             {/* Top Navigation using reusable Header */}
@@ -319,25 +403,25 @@ const Dashboard = () => {
             <MainContent as={motion.div} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
 
                 {/* Page Header */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <PageHeaderRow>
                     <div>
-                        <h1 style={{ fontSize: "2rem", fontWeight: 800, marginBottom: "0.25rem" }}>Security Dashboard</h1>
-                        <p style={{ color: "hsl(var(--muted-foreground))" }}>Behavioral insights based on simulated social engineering scenarios.</p>
+                        <DashboardTitle>Security Dashboard</DashboardTitle>
+                        <DashboardSubtitle>Behavioral insights based on simulated social engineering scenarios.</DashboardSubtitle>
                     </div>
-                    <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-                        <Button variant="outline" onClick={() => navigate("/training")}>
+                    <HeaderActions>
+                        <DashboardButton variant="outline" onClick={() => navigate("/training")}>
                             Start Training
-                        </Button>
-                        <Button onClick={() => navigate("/simulation")}>
+                        </DashboardButton>
+                        <DashboardButton onClick={() => navigate("/simulation")}>
                             Start Simulation
-                        </Button>
-                    </div>
-                </div>
+                        </DashboardButton>
+                    </HeaderActions>
+                </PageHeaderRow>
 
                 <SelectorRow>
-                    <span style={{ fontSize: "0.9rem", color: "hsl(var(--muted-foreground))", fontWeight: 600 }}>
+                    <SessionHeading>
                         {loading ? 'Loading Results...' : 'View Results:'}
-                    </span>
+                    </SessionHeading>
                     <SessionSelect
                         value={selectedSessionId}
                         onChange={(e) => setSelectedSessionId(e.target.value)}
@@ -351,74 +435,70 @@ const Dashboard = () => {
                     </SessionSelect>
                 </SelectorRow>
 
-                <ProfileDetailsPane
-                    user={user}
-                    profile={userProfile}
-                    onSave={handleProfileSave}
-                    isSaving={isSavingProfile}
-                />
-
                 {/* Section 1: Key Metrics */}
+                {/* <SectionBlock> */}
                 <MetricsGrid>
                     {/* Card 1: Vulnerability Score */}
-                    <Card>
+                    <MetricCard>
                         <CardHeader>
                             <CardTitle style={{ fontSize: "1rem" }}>Vulnerability Score</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                                <MetricValue>{metrics.averageRiskScore}<span style={{ fontSize: "1.25rem", color: "hsl(var(--muted-foreground))", fontWeight: 400 }}>/100</span></MetricValue>
+                            <SplitValueRow>
+                                <MetricValue>{metrics.averageRiskScore}<ScoreMeta>/100</ScoreMeta></MetricValue>
                                 {metrics.averageRiskScore < 50 ? (
                                     <AlertTriangle size={24} color="hsl(var(--destructive))" />
                                 ) : (
                                     <ShieldAlert size={24} color="hsl(38, 92%, 50%)" />
                                 )}
-                            </div>
+                            </SplitValueRow>
                             <Progress value={metrics.averageRiskScore} style={{ marginTop: "1rem", marginBottom: "0.5rem" }} />
                             <MetricLabel>Higher score indicates lower susceptibility.</MetricLabel>
                         </CardContent>
-                    </Card>
+                    </MetricCard>
 
                     {/* Card 2: Risk Profile */}
-                    <Card>
+                    <MetricCard>
                         <CardHeader>
                             <CardTitle style={{ fontSize: "1rem" }}>Risk Profile</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", marginTop: "0.5rem" }}>
-                                <div style={{ textAlign: "center", flex: 1, backgroundColor: "hsl(var(--destructive)/0.1)", borderRadius: "8px", padding: "10px" }}>
-                                    <div style={{ fontSize: "2rem", fontWeight: "bold", color: "hsl(var(--destructive))" }}>{metrics.highRiskCount}</div>
-                                    <div style={{ fontSize: "0.75rem", color: "hsl(var(--muted-foreground))" }}>HIGH RISK</div>
-                                </div>
-                                <div style={{ textAlign: "center", flex: 1, backgroundColor: "hsl(var(--success)/0.1)", borderRadius: "8px", padding: "10px" }}>
-                                    <div style={{ fontSize: "2rem", fontWeight: "bold", color: "hsl(var(--success))" }}>{metrics.lowRiskCount}</div>
-                                    <div style={{ fontSize: "0.75rem", color: "hsl(var(--muted-foreground))" }}>LOW RISK</div>
-                                </div>
-                            </div>
-                            <p style={{ fontSize: "0.85rem", lineHeight: 1.4, color: "hsl(var(--muted-foreground))", textAlign: "center" }}>
+                            <RiskProfileGrid>
+                                <RiskProfileCell $tone="high">
+                                    <RiskProfileValue $tone="high">{metrics.highRiskCount}</RiskProfileValue>
+                                    <RiskProfileLabel>HIGH RISK</RiskProfileLabel>
+                                </RiskProfileCell>
+                                <RiskProfileCell $tone="low">
+                                    <RiskProfileValue $tone="low">{metrics.lowRiskCount}</RiskProfileValue>
+                                    <RiskProfileLabel>LOW RISK</RiskProfileLabel>
+                                </RiskProfileCell>
+                            </RiskProfileGrid>
+                            <p style={{ fontSize: "0.85rem", lineHeight: 1.4, color: "var(--text-secondary)", textAlign: "center" }}>
                                 Historical baseline of susceptibility across all simulated encounters.
                             </p>
                         </CardContent>
-                    </Card>
+                    </MetricCard>
 
                     {/* Card 3: Simulations Completed */}
-                    <Card>
+                    <MetricCard>
                         <CardHeader>
                             <CardTitle style={{ fontSize: "1rem" }}>Simulations Completed</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+                            <SplitValueRow>
                                 <MetricValue>{metrics.totalSimulations}</MetricValue>
                                 <CheckCircle size={24} color="hsl(142, 76%, 36%)" />
-                            </div>
+                            </SplitValueRow>
                             <MetricLabel>Total scenarios successfully completed.</MetricLabel>
                         </CardContent>
-                    </Card>
+                    </MetricCard>
                 </MetricsGrid>
+                {/* </SectionBlock> */}
 
                 {/* Section 2: Behavior Insights */}
+                {/* <SectionBlock> */}
                 <InsightsGrid>
-                    <Card>
+                    <DashboardCard>
                         <CardHeader>
                             <CardTitle>Risk Breakdown</CardTitle>
                         </CardHeader>
@@ -458,9 +538,9 @@ const Dashboard = () => {
                                 )}
                             </RiskList>
                         </CardContent>
-                    </Card>
+                    </DashboardCard>
 
-                    <Card style={{ backgroundColor: "hsl(var(--secondary) / 0.5)", border: "none" }}>
+                    <DashboardCard style={{ backgroundColor: "hsl(var(--secondary) / 0.5)", border: "none" }}>
                         <CardHeader>
                             <CardTitle>Recommended Focus</CardTitle>
                         </CardHeader>
@@ -468,19 +548,21 @@ const Dashboard = () => {
                             <p style={{ lineHeight: 1.6, marginBottom: "1.5rem" }}>
                                 You show a vulnerability to <strong>urgency-based</strong> social engineering triggers. Attackers use this to bypass critical thinking.
                             </p>
-                            <Button
+                            <DashboardButton
                                 variant="outline"
                                 style={{ width: "100%", backgroundColor: "hsl(var(--background))" }}
                                 onClick={() => navigate("/simulation")}
                             >
                                 Start Urgency Training
-                            </Button>
+                            </DashboardButton>
                         </CardContent>
-                    </Card>
+                    </DashboardCard>
                 </InsightsGrid>
+                {/* </SectionBlock> */}
 
                 {/* Section 3: Selected Session Details */}
-                <Card>
+                {/* <SectionBlock> */}
+                <DashboardCard>
                     <CardHeader>
                         <CardTitle>
                             {selectedSessionId === 'ALL' ? 'Most Recent Session (All Simulations)' : 'Selected Simulation'}
@@ -535,7 +617,7 @@ const Dashboard = () => {
                                     </tbody>
                                 </Table>
                                 {recentSession.explanation && (
-                                    <div style={{ padding: "1.5rem", borderTop: "1px solid hsl(var(--border))", backgroundColor: "hsl(var(--muted)/0.2)" }}>
+                                    <div style={{ padding: "1.5rem", borderTop: "1px solid hsl(var(--border-hsl))", backgroundColor: "hsl(var(--muted)/0.2)" }}>
                                         <h4 style={{ fontSize: "0.875rem", fontWeight: 600, marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                             <Brain size={16} color="hsl(var(--primary))" />
                                             AI Analysis
@@ -549,16 +631,17 @@ const Dashboard = () => {
                         ) : (
                             <div style={{ padding: "3rem", textAlign: "center", color: "hsl(var(--muted-foreground))" }}>
                                 <p>No simulation sessions recorded yet.</p>
-                                <Button
+                                <DashboardButton
                                     onClick={() => navigate("/simulation")}
                                     style={{ marginTop: "1rem" }}
                                 >
                                     Start First Simulation
-                                </Button>
+                                </DashboardButton>
                             </div>
                         )}
                     </CardContent>
-                </Card>
+                </DashboardCard>
+                {/* </SectionBlock> */}
 
             </MainContent>
         </PageContainer>
@@ -566,3 +649,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

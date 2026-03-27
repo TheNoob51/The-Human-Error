@@ -118,8 +118,8 @@ const Desktop = () => {
                     icon={<Mail size={16} />} // Using Mail icon as generic system icon for now
                     defaultX={300}
                     defaultY={200}
-                    width={400}
-                    height={200}
+                    width={620}
+                    height={360}
                 >
                     <SystemAlert />
                 </SimulationWindow>
@@ -136,3 +136,4 @@ const Desktop = () => {
 };
 
 export default Desktop;
+
